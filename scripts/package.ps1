@@ -1,13 +1,14 @@
-param([string]$BuildId = ('1.0.0-' + (Get-Date -Format 'yyyyMMdd-HHmmss')))
+param([string]$BuildId = ('1.0.1-' + (Get-Date -Format 'yyyyMMdd-HHmmss')))
 $ErrorActionPreference = 'Stop'
-if ($BuildId -notmatch '^1\.0\.0-\d{8}-\d{6}$') { throw 'Unexpected build identifier.' }
+if ($BuildId -notmatch '^1\.0\.1-\d{8}-\d{6}$') { throw 'Unexpected build identifier.' }
 $root = Split-Path -Parent $PSScriptRoot
 $build = Join-Path $root 'build/Release'
 $package = Join-Path $root ('out/package-' + $BuildId)
 $runtime = Join-Path $package ('versions/' + $BuildId)
 if (Test-Path -LiteralPath $package) { throw 'Package directory already exists. Use a new BuildId.' }
 New-Item -ItemType Directory -Path $runtime -Force | Out-Null
-$dependencies = @(Get-Content -LiteralPath (Join-Path $build 'runtime-dependencies.json') -Raw | ConvertFrom-Json)
+# Windows PowerShell 5.1 returns a JSON array as one pipeline object; enumerate it explicitly.
+$dependencies = @((Get-Content -LiteralPath (Join-Path $build 'runtime-dependencies.json') -Raw | ConvertFrom-Json) | ForEach-Object { $_ })
 foreach ($dependency in $dependencies) {
     if ($dependency.Name -notmatch '^(TK[A-Za-z0-9]+|lib3mf|msvcp140(?:_[a-z0-9_]+)?|vcruntime140(?:_[a-z0-9_]+)?|concrt140)\.dll$') {
         throw ('Unexpected distribution dependency: ' + $dependency.Name)
@@ -17,7 +18,7 @@ foreach ($dependency in $dependencies) {
 $binaries = @('thumbnail-cli.exe','thumbnail-worker.exe','thumbnail-shell.dll','thumbnail-settings.exe','shell-probe.exe','runtime-dependencies.json') + @($dependencies.Name)
 foreach ($name in $binaries) { Copy-Item -LiteralPath (Join-Path $build $name) -Destination $runtime }
 $payload = [ordered]@{
-    Product='3DThumbnail'; Schema=1; Version='1.0.0'; BuildId=$BuildId
+    Product='3DThumbnail'; Schema=1; Version='1.0.1'; BuildId=$BuildId
     Files=@(Get-ChildItem -LiteralPath $runtime -File | Sort-Object Name | ForEach-Object {
         [ordered]@{Name=$_.Name;SHA256=(Get-FileHash -LiteralPath $_.FullName).Hash}
     })

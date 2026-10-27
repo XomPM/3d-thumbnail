@@ -11,15 +11,15 @@ InstallDir "$LOCALAPPDATA\Programs\3DThumbnail"
 RequestExecutionLevel user
 SetCompressor /SOLID zlib
 SetOverwrite on
-VIProductVersion "1.0.0.0"
+VIProductVersion "1.0.1.0"
 VIAddVersionKey /LANG=1033 "ProductName" "3D Thumbnail"
 VIAddVersionKey /LANG=1033 "FileDescription" "3D Thumbnail Setup"
-VIAddVersionKey /LANG=1033 "FileVersion" "1.0.0"
+VIAddVersionKey /LANG=1033 "FileVersion" "1.0.1"
 VIAddVersionKey /LANG=1033 "LegalCopyright" "Copyright (c) 2026 DMIND / dmind114@gmail.com"
 !define MUI_ABORTWARNING
 !define MUI_ICON "${PACKAGE_DIR}\dmind.ico"
 !define MUI_UNICON "${PACKAGE_DIR}\dmind.ico"
-!define MUI_WELCOMEPAGE_TEXT "Windows 탐색기에 3D 파일 썸네일과 색상 설정을 설치합니다.$\r$\n$\r$\n지원 형식: 3MF, STL, STEP/STP, OBJ, GLB/glTF, PLY, IGES/IGS, FBX.$\r$\n$\r$\n현재 사용자 계정에 설치하며 기본 파일 열기 앱은 유지합니다. 모델 처리는 별도 작업자에서 실행합니다.$\r$\n$\r$\n1.0.0 첫 공개 버전입니다. Windows 11 x64 개발 PC에서 검증했으며 다른 PC 환경은 추가 확인이 필요합니다."
+!define MUI_WELCOMEPAGE_TEXT "Windows 탐색기에 3D 파일 썸네일과 색상 설정을 설치합니다.$\r$\n$\r$\n지원 형식: 3MF, STL, STEP/STP, OBJ, GLB/glTF, PLY, IGES/IGS, FBX.$\r$\n$\r$\n현재 사용자 계정에 설치하며 기본 파일 열기 앱은 유지합니다. 모델 처리는 별도 작업자에서 실행합니다.$\r$\n$\r$\n1.0.1 호환성 수정 버전입니다. Windows 11 x64 개발 PC에서 검증했으며 다른 PC 환경은 추가 확인이 필요합니다."
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "${PACKAGE_DIR}\LICENSE"
 !insertmacro MUI_PAGE_INSTFILES
@@ -84,7 +84,7 @@ Section "Install"
   CreateShortcut "$SMPROGRAMS\3D Thumbnail\사용 설명서.lnk" "$INSTDIR\README.md"
   CreateShortcut "$SMPROGRAMS\3D Thumbnail\제거.lnk" "$INSTDIR\Uninstall.exe"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\3DThumbnail" "DisplayName" "3D Thumbnail"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\3DThumbnail" "DisplayVersion" "1.0.0"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\3DThumbnail" "DisplayVersion" "1.0.1"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\3DThumbnail" "Publisher" "DMIND"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\3DThumbnail" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\3DThumbnail" "DisplayIcon" '$\"$INSTDIR\versions\${BUILD_ID}\thumbnail-settings.exe$\",0'

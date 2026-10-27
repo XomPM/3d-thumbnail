@@ -102,7 +102,10 @@ Mesh parse_3mf(std::span<const std::byte> bytes) {
         const auto wrapper = Lib3MF::CWrapper::loadLibrary();
         const auto model = wrapper->CreateModel();
         const auto reader = model->QueryReader("3mf");
-        reader->SetStrictModeActive(true);
+        // Slicers (Bambu Studio, PrusaSlicer, ...) add vendor metadata and attributes that strict mode
+        // rejects. Non-strict mode records them as warnings; malformed structure still throws and every
+        // triangle is checked again by append_mesh/append_checked_triangle.
+        reader->SetStrictModeActive(false);
         reader->ReadFromBuffer(Lib3MF::CInputVector<Lib3MF_uint8>(
             reinterpret_cast<const Lib3MF_uint8*>(bytes.data()), bytes.size()));
         Traversal traversal{model, {}, {}, 0};

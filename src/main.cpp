@@ -1,5 +1,6 @@
 #include "thumbnail/renderer.h"
 #include "thumbnail/model_reader.h"
+#include "thumbnail/package_preview.h"
 #include <windows.h>
 
 #include <algorithm>
@@ -20,7 +21,7 @@ std::wstring lowercase_extension(const std::filesystem::path& path) {
 }
 
 void show_usage() {
-    std::wcout << L"3D Thumbnail worker 1.0.0\n"
+    std::wcout << L"3D Thumbnail worker 1.0.1\n"
                << L"Usage: thumbnail-cli INPUT OUTPUT.png [--size 64..1024] [--background #RRGGBB] [--model #RRGGBB] [--background-transparency 0..100]\n"
                << L"Formats: STL, STEP/STP, OBJ, 3MF, GLB/glTF, PLY, IGES/IGS, FBX. Default size 256.\n"
                << L"Output must not already exist. Run thumbnail-cli to enforce worker resource limits.\n";
@@ -69,15 +70,28 @@ int wmain(int argc, wchar_t* argv[]) {
         if (std::filesystem::exists(output)) {
             throw std::runtime_error("Output already exists. Choose a new filename.");
         }
-        const auto mesh = thumbnail::read_model(input);
-        const auto image = thumbnail::render_thumbnail(mesh, size, appearance);
+        thumbnail::Image image;
+        std::size_t triangle_count = 0;
+        try {
+            const auto mesh = thumbnail::read_model(input);
+            triangle_count = mesh.triangles.size();
+            image = thumbnail::render_thumbnail(mesh, size, appearance);
+        } catch (const std::runtime_error& geometry_error) {
+            if (lowercase_extension(input) != L".3mf") { throw; }
+            try { image = thumbnail::read_3mf_preview(thumbnail::read_model_bytes(input), size); }
+            catch (const std::exception& preview_error) {
+                throw std::runtime_error(std::string(geometry_error.what()) + " Stored preview unavailable: " + preview_error.what());
+            }
+            std::cout << "Using stored 3MF preview; original colors/background retained. Geometry was not validated.\n"
+                      << "Direct rendering unavailable: " << geometry_error.what() << '\n';
+        }
         thumbnail::write_png(image, output);
         const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - started).count();
         const auto output_utf8 = output.u8string();
         std::cout << "Saved " << std::string(output_utf8.begin(), output_utf8.end()) << '\n'
-                  << mesh.triangles.size() << " triangles, " << size << 'x' << size
-                  << ", WARP software rendering, " << elapsed << " ms\n";
+                  << triangle_count << " rendered triangles, " << size << 'x' << size
+                  << ", " << elapsed << " ms\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "Error: " << error.what() << '\n';

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(ThreeDThumbnail VERSION 1.0.0 LANGUAGES C CXX)
+project(ThreeDThumbnail VERSION 1.0.1 LANGUAGES C CXX)
 
 if(NOT WIN32)
     message(FATAL_ERROR "This prototype requires Windows and the Windows SDK.")
@@ -21,6 +21,7 @@ add_library(thumbnail_core STATIC
     src/obj_reader.cpp
     src/gltf_resources.cpp
     src/three_mf_reader.cpp
+    src/package_preview.cpp
     src/renderer.cpp
     src/png_writer.cpp
 )
@@ -69,6 +70,11 @@ target_compile_options(thumbnail-settings PRIVATE /W4 /permissive- /utf-8)
 
 include(CTest)
 if(BUILD_TESTING)
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+    add_test(NAME thumbnail-package-preview COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_SOURCE_DIR}/tests/package_preview_tests.py" "$<TARGET_FILE:thumbnail-cli>"
+        "${CMAKE_SOURCE_DIR}/samples" "${CMAKE_BINARY_DIR}/test-output")
+    set_tests_properties(thumbnail-package-preview PROPERTIES TIMEOUT 90)
     add_executable(appearance-tests tests/appearance_tests.cpp)
     target_link_libraries(appearance-tests PRIVATE thumbnail_appearance advapi32)
     target_compile_options(appearance-tests PRIVATE /W4 /permissive- /utf-8)

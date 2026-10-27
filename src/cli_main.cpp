@@ -5,7 +5,7 @@
 
 int wmain(int argc, wchar_t** argv) {
     if (argc == 2 && std::wstring(argv[1]) == L"--help") {
-        std::cout << "3D Thumbnail 1.0.0\n"
+        std::cout << "3D Thumbnail 1.0.1\n"
                   << "Usage: thumbnail-cli INPUT OUTPUT.png [--size 64..1024] [--background #RRGGBB] [--model #RRGGBB] [--background-transparency 0..100]\n"
                   << "Formats: STL, STEP/STP, OBJ, 3MF, GLB/glTF, PLY, IGES/IGS, FBX. Default size 256.\n"
                   << "Worker limits: 15 seconds, 1 GiB committed memory, one process.\n"

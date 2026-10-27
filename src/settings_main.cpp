@@ -18,11 +18,13 @@ using namespace thumbnail;
 using Microsoft::WRL::ComPtr;
 constexpr UINT kRefreshFinished = WM_APP + 1;
 constexpr UINT kRefreshProgress = WM_APP + 2;
+constexpr UINT kRefreshDetails = WM_APP + 3;
 struct SettingsWindow {
     SettingsStyle style;
     Image preview;
     std::jthread refresh_thread;
     bool refreshing = false;
+    std::wstring refresh_errors;
 };
 
 Mesh preview_mesh() {
@@ -144,14 +146,32 @@ void set_busy(HWND window, SettingsWindow& state, bool busy) {
         EnableWindow(GetDlgItem(window, control), !busy);
     }
     EnableWindow(GetDlgItem(window, IDC_CANCEL_REFRESH), busy);
+    EnableWindow(GetDlgItem(window, IDC_REFRESH_DETAILS), !busy && !state.refresh_errors.empty());
+}
+std::wstring error_text(const char* message) {
+    const std::string text(message);
+    const auto length = static_cast<int>(std::min<std::size_t>(text.size(), 2048));
+    const auto count = MultiByteToWideChar(CP_UTF8, 0, text.data(), length, nullptr, 0);
+    std::wstring result(count, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, text.data(), length, result.data(), count);
+    return result;
+}
+// One line for the status bar: prefer the worker's "Error:" line over the generic wrapper text.
+std::wstring short_error(const std::wstring& text) {
+    std::size_t start = text.find(L"Error: ");
+    start = start == std::wstring::npos ? 0 : start + 7;
+    auto line = text.substr(start, text.find_first_of(L"\r\n", start) - start);
+    if (line.size() > 160) { line = line.substr(0, 157) + L"..."; }
+    return line;
 }
 void refresh_selection(HWND window, SettingsWindow& state, bool folder) {
     const auto path = choose_path(window, folder);
     if (path.empty()) { return; }
     save_appearance(read_colors(window));
+    state.refresh_errors.clear();
     state.refresh_thread = std::jthread([window, path, folder](std::stop_token stop) {
         unsigned done = 0, failed = 0;
-        std::wstring detail;
+        std::wstring detail, first_failure;
         try {
             const ComApartment apartment;
             std::vector<std::filesystem::path> files;
@@ -167,19 +187,45 @@ void refresh_selection(HWND window, SettingsWindow& state, bool folder) {
             for (const auto& file : files) {
                 if (stop.stop_requested()) { break; }
                 try { refresh_thumbnails(file); ++done; }
-                catch (const std::exception&) { ++failed; }
+                catch (const std::exception& error) {
+                    ++failed;
+                    const auto message = error_text(error.what());
+                    if (first_failure.empty()) { first_failure = file.filename().wstring() + L": " + short_error(message); }
+                    if (failed <= 10) { detail += file.filename().wstring() + L"\r\n" + message + L"\r\n\r\n"; }
+                }
                 post_status(window, kRefreshProgress, L"갱신 " + std::to_wstring(done) + L" / 실패 " + std::to_wstring(failed) + L" — " + file.filename().wstring());
             }
         } catch (const std::exception& error) {
             ++failed;
-            const std::string text(error.what());
-            detail.assign(text.begin(), text.end());
+            const auto message = error_text(error.what());
+            if (first_failure.empty()) { first_failure = path.filename().wstring() + L": " + short_error(message); }
+            detail += path.filename().wstring() + L"\r\n" + message;
         }
+        if (failed > 10) { detail += L"처음 10개의 실패만 표시합니다.\r\n"; }
+        post_status(window, kRefreshDetails, std::move(detail));
         post_status(window, kRefreshFinished, (stop.stop_requested() ? L"중단됨. " : L"완료. ") +
-            std::wstring(L"갱신 ") + std::to_wstring(done) + L"개 / 실패 " + std::to_wstring(failed) + L"개. " + detail);
+            std::wstring(L"갱신 ") + std::to_wstring(done) + L"개 / 실패 " + std::to_wstring(failed) + L"개." +
+            (failed ? L" 첫 실패 — " + first_failure + L" (실패 상세 확인)" : std::wstring()));
     });
     set_busy(window, state, true);
     SetDlgItemTextW(window, IDC_STATUS, L"색상을 저장했습니다. 썸네일 갱신 중…");
+}
+
+INT_PTR CALLBACK error_dialog(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
+    if (message == WM_INITDIALOG) {
+        SetDlgItemTextW(window, IDC_ERROR_TEXT, reinterpret_cast<const wchar_t*>(lparam));
+        return TRUE;
+    }
+    if (message == WM_COMMAND && LOWORD(wparam) == IDC_COPY_ERRORS) {
+        SendDlgItemMessageW(window, IDC_ERROR_TEXT, EM_SETSEL, 0, -1);
+        SendDlgItemMessageW(window, IDC_ERROR_TEXT, WM_COPY, 0, 0);
+        return TRUE;
+    }
+    if (message == WM_CLOSE || (message == WM_COMMAND && (LOWORD(wparam) == IDCANCEL || LOWORD(wparam) == IDOK))) {
+        EndDialog(window, 0);
+        return TRUE;
+    }
+    return FALSE;
 }
 
 INT_PTR CALLBACK settings_dialog(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
@@ -198,6 +244,11 @@ INT_PTR CALLBACK settings_dialog(HWND window, UINT message, WPARAM wparam, LPARA
             return TRUE;
         }
         if (!state) { return FALSE; }
+        if (message == kRefreshDetails) {
+            const std::unique_ptr<std::wstring> text(reinterpret_cast<std::wstring*>(lparam));
+            state->refresh_errors = *text;
+            return TRUE;
+        }
         if (message == WM_HSCROLL && reinterpret_cast<HWND>(lparam) == GetDlgItem(window, IDC_TRANSPARENCY_SLIDER)) {
             SetDlgItemInt(window, IDC_TRANSPARENCY, static_cast<UINT>(SendDlgItemMessageW(window, IDC_TRANSPARENCY_SLIDER, TBM_GETPOS, 0, 0)), FALSE);
             return TRUE;
@@ -244,6 +295,10 @@ INT_PTR CALLBACK settings_dialog(HWND window, UINT message, WPARAM wparam, LPARA
         case IDC_DEFAULTS: set_colors(window, {}); SetDlgItemTextW(window, IDC_STATUS, L"기본 설정을 불러왔습니다. ‘설정 저장’을 누르면 적용됩니다."); break;
         case IDC_REFRESH_FILE: refresh_selection(window, *state, false); break;
         case IDC_REFRESH_FOLDER: refresh_selection(window, *state, true); break;
+        case IDC_REFRESH_DETAILS:
+            DialogBoxParamW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDD_REFRESH_DETAILS), window,
+                error_dialog, reinterpret_cast<LPARAM>(state->refresh_errors.c_str()));
+            break;
         case IDC_CANCEL_REFRESH: state->refresh_thread.request_stop(); SetDlgItemTextW(window, IDC_STATUS, L"현재 파일의 갱신이 끝나면 중단합니다."); break;
         default: return FALSE;
         }
