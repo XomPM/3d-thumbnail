@@ -3,6 +3,7 @@
 #include "windows_helpers.h"
 #include "settings_ids.h"
 #include "settings_style.h"
+#include "settings_text.h"
 #include <commdlg.h>
 #include <commctrl.h>
 #include <shobjidl.h>
@@ -25,7 +26,26 @@ struct SettingsWindow {
     std::jthread refresh_thread;
     bool refreshing = false;
     std::wstring refresh_errors;
+    Language language = load_language();
 };
+struct ErrorDetails { const wchar_t* text; Language language; };
+
+// Every visible string comes from settings_text so the window can switch language without restarting.
+void apply_language(HWND window, Language language) {
+    SetWindowTextW(window, text(language, Text::Caption));
+    const std::pair<int, Text> labels[] = {
+        {IDC_SUBTITLE, Text::Subtitle}, {IDC_VERSION, Text::Version}, {IDC_COLOR_TITLE, Text::StyleTitle},
+        {IDC_LABEL_BACKGROUND, Text::BackgroundLabel}, {IDC_LABEL_TRANSPARENCY, Text::TransparencyLabel},
+        {IDC_HELP_TRANSPARENCY, Text::TransparencyHelp}, {IDC_LABEL_MODEL, Text::ModelLabel},
+        {IDC_PICK_BACKGROUND, Text::PickBackground}, {IDC_PICK_MODEL, Text::PickModel}, {IDC_NOTE, Text::CreatorNote},
+        {IDC_DEFAULTS, Text::Defaults}, {IDC_SAVE, Text::Save}, {IDC_PREVIEW_TITLE, Text::PreviewTitle},
+        {IDC_REFRESH_TITLE, Text::RefreshTitle}, {IDC_REFRESH_HELP, Text::RefreshHelp}, {IDC_STATUS, Text::RefreshHint},
+        {IDC_REFRESH_FILE, Text::ChooseFile}, {IDC_REFRESH_FOLDER, Text::ChooseFolder},
+        {IDC_REFRESH_DETAILS, Text::FailureDetails}, {IDC_CANCEL_REFRESH, Text::StopRefresh}, {IDCANCEL, Text::Close},
+    };
+    for (const auto& [id, entry] : labels) { SetDlgItemTextW(window, id, text(language, entry)); }
+    InvalidateRect(window, nullptr, TRUE);
+}
 
 Mesh preview_mesh() {
     const Vec3 points[] = {{-1,-.75,0},{1,-.75,0},{1,.75,0},{-1,.75,0},{-1,-.75,.2},{1,-.75,.2},{1,.75,.2},{-1,.75,.2}};
@@ -107,7 +127,7 @@ void choose_color(HWND window, int control) {
         SetDlgItemTextW(window, control, format_color({GetRValue(dialog.rgbResult), GetGValue(dialog.rgbResult), GetBValue(dialog.rgbResult)}).c_str());
     }
 }
-std::filesystem::path choose_path(HWND window, bool folder) {
+std::filesystem::path choose_path(HWND window, bool folder, Language language) {
     ComPtr<IFileOpenDialog> dialog;
     check_hresult(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&dialog)), "Open file picker");
     DWORD options{};
@@ -115,7 +135,7 @@ std::filesystem::path choose_path(HWND window, bool folder) {
     check_hresult(dialog->SetOptions(options | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST | FOS_FILEMUSTEXIST |
         (folder ? FOS_PICKFOLDERS : 0)), "Set picker options");
     if (!folder) {
-        const COMDLG_FILTERSPEC filter{L"3D 모델", L"*.stl;*.obj;*.3mf;*.step;*.stp;*.ply;*.glb;*.gltf;*.iges;*.igs;*.fbx"};
+        const COMDLG_FILTERSPEC filter{text(language, Text::FileFilter), L"*.stl;*.obj;*.3mf;*.step;*.stp;*.ply;*.glb;*.gltf;*.iges;*.igs;*.fbx"};
         check_hresult(dialog->SetFileTypes(1, &filter), "Set file types");
     }
     const auto result = dialog->Show(window);
@@ -165,11 +185,12 @@ std::wstring short_error(const std::wstring& text) {
     return line;
 }
 void refresh_selection(HWND window, SettingsWindow& state, bool folder) {
-    const auto path = choose_path(window, folder);
+    const auto language = state.language;
+    const auto path = choose_path(window, folder, language);
     if (path.empty()) { return; }
     save_appearance(read_colors(window));
     state.refresh_errors.clear();
-    state.refresh_thread = std::jthread([window, path, folder](std::stop_token stop) {
+    state.refresh_thread = std::jthread([window, path, folder, language](std::stop_token stop) {
         unsigned done = 0, failed = 0;
         std::wstring detail, first_failure;
         try {
@@ -193,7 +214,8 @@ void refresh_selection(HWND window, SettingsWindow& state, bool folder) {
                     if (first_failure.empty()) { first_failure = file.filename().wstring() + L": " + short_error(message); }
                     if (failed <= 10) { detail += file.filename().wstring() + L"\r\n" + message + L"\r\n\r\n"; }
                 }
-                post_status(window, kRefreshProgress, L"갱신 " + std::to_wstring(done) + L" / 실패 " + std::to_wstring(failed) + L" — " + file.filename().wstring());
+                post_status(window, kRefreshProgress, format_text(language, Text::ProgressFormat,
+                    std::to_wstring(done), std::to_wstring(failed), file.filename().wstring()));
             }
         } catch (const std::exception& error) {
             ++failed;
@@ -201,19 +223,24 @@ void refresh_selection(HWND window, SettingsWindow& state, bool folder) {
             if (first_failure.empty()) { first_failure = path.filename().wstring() + L": " + short_error(message); }
             detail += path.filename().wstring() + L"\r\n" + message;
         }
-        if (failed > 10) { detail += L"처음 10개의 실패만 표시합니다.\r\n"; }
+        if (failed > 10) { detail += std::wstring(text(language, Text::OnlyFirstFailures)) + L"\r\n"; }
         post_status(window, kRefreshDetails, std::move(detail));
-        post_status(window, kRefreshFinished, (stop.stop_requested() ? L"중단됨. " : L"완료. ") +
-            std::wstring(L"갱신 ") + std::to_wstring(done) + L"개 / 실패 " + std::to_wstring(failed) + L"개." +
-            (failed ? L" 첫 실패 — " + first_failure + L" (실패 상세 확인)" : std::wstring()));
+        post_status(window, kRefreshFinished,
+            format_text(language, stop.stop_requested() ? Text::StoppedFormat : Text::FinishedFormat, std::to_wstring(done), std::to_wstring(failed)) +
+            (failed ? format_text(language, Text::FirstFailureFormat, first_failure) : std::wstring()));
     });
     set_busy(window, state, true);
-    SetDlgItemTextW(window, IDC_STATUS, L"색상을 저장했습니다. 썸네일 갱신 중…");
+    SetDlgItemTextW(window, IDC_STATUS, text(language, Text::Refreshing));
 }
 
 INT_PTR CALLBACK error_dialog(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
     if (message == WM_INITDIALOG) {
-        SetDlgItemTextW(window, IDC_ERROR_TEXT, reinterpret_cast<const wchar_t*>(lparam));
+        const auto* details = reinterpret_cast<const ErrorDetails*>(lparam);
+        SetWindowTextW(window, text(details->language, Text::DetailsCaption));
+        SetDlgItemTextW(window, IDC_ERROR_INTRO, text(details->language, Text::DetailsIntro));
+        SetDlgItemTextW(window, IDC_COPY_ERRORS, text(details->language, Text::CopyAll));
+        SetDlgItemTextW(window, IDOK, text(details->language, Text::Close));
+        SetDlgItemTextW(window, IDC_ERROR_TEXT, details->text);
         return TRUE;
     }
     if (message == WM_COMMAND && LOWORD(wparam) == IDC_COPY_ERRORS) {
@@ -239,6 +266,11 @@ INT_PTR CALLBACK settings_dialog(HWND window, UINT message, WPARAM wparam, LPARA
             SendDlgItemMessageW(window, IDC_TRANSPARENCY, EM_SETLIMITTEXT, 3, 0);
             SendDlgItemMessageW(window, IDC_TRANSPARENCY_SLIDER, TBM_SETRANGE, TRUE, MAKELPARAM(0, 100));
             SendDlgItemMessageW(window, IDC_TRANSPARENCY_SLIDER, TBM_SETPAGESIZE, 0, 10);
+            const auto language_list = GetDlgItem(window, IDC_LANGUAGE);
+            SendMessageW(language_list, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"한국어"));
+            SendMessageW(language_list, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"English"));
+            SendMessageW(language_list, CB_SETCURSEL, state->language == Language::Korean ? 0 : 1, 0);
+            apply_language(window, state->language);
             set_colors(window, load_appearance());
             update_preview(window, *state);
             return TRUE;
@@ -278,19 +310,28 @@ INT_PTR CALLBACK settings_dialog(HWND window, UINT message, WPARAM wparam, LPARA
         if (message == WM_TIMER) {
             KillTimer(window, 1);
             try { update_preview(window, *state); }
-            catch (const std::invalid_argument&) { SetDlgItemTextW(window, IDC_STATUS, L"색상은 #RRGGBB, 배경 투명도는 0~100으로 입력하세요."); }
+            catch (const std::invalid_argument&) { SetDlgItemTextW(window, IDC_STATUS, text(state->language, Text::InvalidInput)); }
             return TRUE;
         }
         if (message == WM_CLOSE || (message == WM_COMMAND && LOWORD(wparam) == IDCANCEL)) {
             if (state->refreshing) {
                 state->refresh_thread.request_stop();
-                SetDlgItemTextW(window, IDC_STATUS, L"현재 파일의 갱신이 끝나면 중단합니다. 완료 후 닫아 주세요.");
+                SetDlgItemTextW(window, IDC_STATUS, text(state->language, Text::StoppingBeforeClose));
             } else { EndDialog(window, 0); }
             return TRUE;
         }
         if (message != WM_COMMAND) { return FALSE; }
         if (HIWORD(wparam) == EN_SETFOCUS || HIWORD(wparam) == EN_KILLFOCUS) {
             state->style.invalidate_field(window, LOWORD(wparam));
+            return TRUE;
+        }
+        if (LOWORD(wparam) == IDC_LANGUAGE) {
+            if (HIWORD(wparam) != CBN_SELCHANGE) { return FALSE; }
+            const auto selected = SendDlgItemMessageW(window, IDC_LANGUAGE, CB_GETCURSEL, 0, 0);
+            state->language = selected == 0 ? Language::Korean : Language::English;
+            save_language(state->language);
+            apply_language(window, state->language);
+            if (state->refreshing) { SetDlgItemTextW(window, IDC_STATUS, text(state->language, Text::Refreshing)); }
             return TRUE;
         }
         if (HIWORD(wparam) == EN_CHANGE) { SetTimer(window, 1, 250, nullptr); return TRUE; }
@@ -300,16 +341,18 @@ INT_PTR CALLBACK settings_dialog(HWND window, UINT message, WPARAM wparam, LPARA
         case IDC_SAVE:
             save_appearance(read_colors(window));
             update_preview(window, *state);
-            SetDlgItemTextW(window, IDC_STATUS, L"저장했습니다. 이미 표시된 썸네일은 파일이나 폴더를 선택해 갱신하세요.");
+            SetDlgItemTextW(window, IDC_STATUS, text(state->language, Text::Saved));
             break;
-        case IDC_DEFAULTS: set_colors(window, {}); SetDlgItemTextW(window, IDC_STATUS, L"기본값을 불러왔습니다. 저장을 눌러야 적용됩니다."); break;
+        case IDC_DEFAULTS: set_colors(window, {}); SetDlgItemTextW(window, IDC_STATUS, text(state->language, Text::DefaultsLoaded)); break;
         case IDC_REFRESH_FILE: refresh_selection(window, *state, false); break;
         case IDC_REFRESH_FOLDER: refresh_selection(window, *state, true); break;
-        case IDC_REFRESH_DETAILS:
+        case IDC_REFRESH_DETAILS: {
+            const ErrorDetails details{state->refresh_errors.c_str(), state->language};
             DialogBoxParamW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDD_REFRESH_DETAILS), window,
-                error_dialog, reinterpret_cast<LPARAM>(state->refresh_errors.c_str()));
+                error_dialog, reinterpret_cast<LPARAM>(&details));
             break;
-        case IDC_CANCEL_REFRESH: state->refresh_thread.request_stop(); SetDlgItemTextW(window, IDC_STATUS, L"현재 파일의 갱신이 끝나면 중단합니다."); break;
+        }
+        case IDC_CANCEL_REFRESH: state->refresh_thread.request_stop(); SetDlgItemTextW(window, IDC_STATUS, text(state->language, Text::Stopping)); break;
         default: return FALSE;
         }
         return TRUE;

@@ -1,5 +1,11 @@
 # Changes
 
+## 1.0.3
+
+- Settings window in Korean or English, switchable from the top-right list; the choice is saved. Defaults to the Windows display language.
+- Setup asks for Korean or English, and creates Start menu shortcuts and the user guide link in that language.
+- Added an English README (`README.en.md`).
+
 ## 1.0.2
 
 - 3MF: show the creator's stored package thumbnail first; render the model only when none is usable.

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(ThreeDThumbnail VERSION 1.0.2 LANGUAGES C CXX)
+project(ThreeDThumbnail VERSION 1.0.3 LANGUAGES C CXX)
 
 if(NOT WIN32)
     message(FATAL_ERROR "This prototype requires Windows and the Windows SDK.")
@@ -64,7 +64,7 @@ target_link_libraries(shell-probe PRIVATE thumbnail_process thumbnail_cache ole3
 target_compile_options(shell-probe PRIVATE /W4 /permissive- /utf-8)
 add_dependencies(shell-probe thumbnail-shell)
 
-add_executable(thumbnail-settings WIN32 src/settings_main.cpp src/settings_style.cpp src/settings.rc src/renderer.cpp src/settings.manifest)
+add_executable(thumbnail-settings WIN32 src/settings_main.cpp src/settings_style.cpp src/settings_text.cpp src/settings.rc src/renderer.cpp src/settings.manifest)
 target_link_libraries(thumbnail-settings PRIVATE thumbnail_appearance thumbnail_cache comdlg32 comctl32 ole32 shell32 gdi32 user32 d3d11 d3dcompiler)
 target_compile_options(thumbnail-settings PRIVATE /W4 /permissive- /utf-8)
 

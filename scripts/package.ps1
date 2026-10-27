@@ -1,6 +1,6 @@
-param([string]$BuildId = ('1.0.2-' + (Get-Date -Format 'yyyyMMdd-HHmmss')))
+param([string]$BuildId = ('1.0.3-' + (Get-Date -Format 'yyyyMMdd-HHmmss')))
 $ErrorActionPreference = 'Stop'
-if ($BuildId -notmatch '^1\.0\.2-\d{8}-\d{6}$') { throw 'Unexpected build identifier.' }
+if ($BuildId -notmatch '^1\.0\.3-\d{8}-\d{6}$') { throw 'Unexpected build identifier.' }
 $root = Split-Path -Parent $PSScriptRoot
 $build = Join-Path $root 'build/Release'
 $package = Join-Path $root ('out/package-' + $BuildId)
@@ -18,13 +18,13 @@ foreach ($dependency in $dependencies) {
 $binaries = @('thumbnail-cli.exe','thumbnail-worker.exe','thumbnail-shell.dll','thumbnail-settings.exe','shell-probe.exe','runtime-dependencies.json') + @($dependencies.Name)
 foreach ($name in $binaries) { Copy-Item -LiteralPath (Join-Path $build $name) -Destination $runtime }
 $payload = [ordered]@{
-    Product='3DThumbnail'; Schema=1; Version='1.0.2'; BuildId=$BuildId
+    Product='3DThumbnail'; Schema=1; Version='1.0.3'; BuildId=$BuildId
     Files=@(Get-ChildItem -LiteralPath $runtime -File | Sort-Object Name | ForEach-Object {
         [ordered]@{Name=$_.Name;SHA256=(Get-FileHash -LiteralPath $_.FullName).Hash}
     })
 }
 $payload | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $runtime 'payload.json') -Encoding UTF8
-foreach ($name in @('LICENSE','README.md','THIRD_PARTY_NOTICES.md','shell-formats.json')) {
+foreach ($name in @('LICENSE','README.md','README.en.md','THIRD_PARTY_NOTICES.md','shell-formats.json')) {
     Copy-Item -LiteralPath (Join-Path $root $name) -Destination $package
 }
 Copy-Item -LiteralPath (Join-Path $root 'licenses') -Destination $package -Recurse
