@@ -20,7 +20,7 @@ std::wstring lowercase_extension(const std::filesystem::path& path) {
 }
 
 void show_usage() {
-    std::wcout << L"3D Thumbnail worker 0.5.0\n"
+    std::wcout << L"3D Thumbnail worker 0.5.1\n"
                << L"Usage: thumbnail-cli INPUT OUTPUT.png [--size 64..1024] [--background #RRGGBB] [--model #RRGGBB]\n"
                << L"Formats: STL, STEP/STP, OBJ, 3MF, GLB/glTF, PLY, IGES/IGS, FBX. Default size 256.\n"
                << L"Output must not already exist. Run thumbnail-cli to enforce worker resource limits.\n";

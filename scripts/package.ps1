@@ -1,6 +1,6 @@
-param([string]$BuildId = ('0.5.0-' + (Get-Date -Format 'yyyyMMdd-HHmmss')))
+param([string]$BuildId = ('0.5.1-' + (Get-Date -Format 'yyyyMMdd-HHmmss')))
 $ErrorActionPreference = 'Stop'
-if ($BuildId -notmatch '^0\.5\.0-\d{8}-\d{6}$') { throw 'Unexpected build identifier.' }
+if ($BuildId -notmatch '^0\.5\.1-\d{8}-\d{6}$') { throw 'Unexpected build identifier.' }
 $root = Split-Path -Parent $PSScriptRoot
 $build = Join-Path $root 'build/Release'
 $package = Join-Path $root ('out/package-' + $BuildId)
@@ -17,7 +17,7 @@ foreach ($dependency in $dependencies) {
 $binaries = @('thumbnail-cli.exe','thumbnail-worker.exe','thumbnail-shell.dll','thumbnail-settings.exe','shell-probe.exe','runtime-dependencies.json') + @($dependencies.Name)
 foreach ($name in $binaries) { Copy-Item -LiteralPath (Join-Path $build $name) -Destination $runtime }
 $payload = [ordered]@{
-    Product='3DThumbnail'; Schema=1; Version='0.5.0'; BuildId=$BuildId
+    Product='3DThumbnail'; Schema=1; Version='0.5.1'; BuildId=$BuildId
     Files=@(Get-ChildItem -LiteralPath $runtime -File | Sort-Object Name | ForEach-Object {
         [ordered]@{Name=$_.Name;SHA256=(Get-FileHash -LiteralPath $_.FullName).Hash}
     })
@@ -27,6 +27,7 @@ foreach ($name in @('LICENSE','README.md','THIRD_PARTY_NOTICES.md','shell-format
     Copy-Item -LiteralPath (Join-Path $root $name) -Destination $package
 }
 Copy-Item -LiteralPath (Join-Path $root 'licenses') -Destination $package -Recurse
+Copy-Item -LiteralPath (Join-Path $root 'assets/dmind.ico') -Destination $package
 $scripts = Join-Path $package 'scripts'
 New-Item -ItemType Directory -Path $scripts | Out-Null
 foreach ($name in @('ShellRegistration.psm1','installer-registration.ps1','installer-cleanup.ps1')) {

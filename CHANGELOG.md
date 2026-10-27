@@ -1,5 +1,11 @@
 # Changes
 
+## 0.5.1 preview
+
+- Name the Start menu app "3D Thumbnail 설정" so Windows search can identify the product.
+- Apply the supplied DMIND logo to the executable, window, settings header, installer and shortcuts.
+- Include friendly product/version metadata and migrate the old "색상 설정" shortcut during updates.
+
 ## 0.5.0 preview
 
 - Add per-user background/model color settings, HEX input, color picker, preview and default restoration.

@@ -1,4 +1,5 @@
 #pragma once
+#define IDI_APP 100
 #define IDD_SETTINGS 101
 #define IDC_BACKGROUND 1001
 #define IDC_MODEL 1002

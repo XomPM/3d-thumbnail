@@ -18,5 +18,8 @@ public:
 private:
     HBRUSH background_ = CreateSolidBrush(RGB(244,246,248));
     HBRUSH surface_ = CreateSolidBrush(RGB(255,255,255));
+    HICON small_icon_ = nullptr;
+    HICON large_icon_ = nullptr;
+    HICON brand_icon_ = nullptr;
     std::vector<HFONT> fonts_;
 };

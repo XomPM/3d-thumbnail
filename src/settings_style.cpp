@@ -1,6 +1,7 @@
 #include "settings_style.h"
 #include "settings_ids.h"
 #include <algorithm>
+#include <stdexcept>
 
 namespace {
 constexpr COLORREF kInk = RGB(23,43,58);
@@ -21,9 +22,21 @@ void rounded(HDC dc, RECT rectangle, COLORREF fill, COLORREF border, int radius)
 
 SettingsStyle::~SettingsStyle() {
     for (const auto font : fonts_) { DeleteObject(font); }
+    for (const auto icon : {small_icon_, large_icon_, brand_icon_}) { if (icon) { DestroyIcon(icon); } }
     DeleteObject(background_); DeleteObject(surface_);
 }
 void SettingsStyle::initialize(HWND window) {
+    const auto dpi = GetDpiForWindow(window);
+    const auto load_icon = [](int size) {
+        const auto icon = static_cast<HICON>(LoadImageW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_APP), IMAGE_ICON, size, size, 0));
+        if (!icon) { throw std::runtime_error("Cannot load application icon."); }
+        return icon;
+    };
+    small_icon_ = load_icon(GetSystemMetricsForDpi(SM_CXSMICON, dpi));
+    large_icon_ = load_icon(GetSystemMetricsForDpi(SM_CXICON, dpi));
+    brand_icon_ = load_icon(MulDiv(48, dpi, 96));
+    SendMessageW(window, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(small_icon_));
+    SendMessageW(window, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(large_icon_));
     const auto font = [&](int points, int weight, const wchar_t* face) {
         const auto result = CreateFontW(-MulDiv(points, GetDpiForWindow(window), 72), 0, 0, 0, weight,
             FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
@@ -48,21 +61,9 @@ void SettingsStyle::paint(HWND window) {
     for (const auto rectangle : {RECT{16,74,224,250}, RECT{236,74,444,250}, RECT{16,262,444,336}}) {
         rounded(dc, dialog_rect(window, rectangle), RGB(255,255,255), kBorder, 14);
     }
-    // An isometric cube marks this model-oriented tool without a raster asset.
-    const auto logo = dialog_rect(window, {20,19,40,39});
-    const LONG cx = (logo.left + logo.right) / 2;
-    const LONG cy = (logo.top + logo.bottom) / 2;
-    POINT top[] = {{cx,logo.top},{logo.right,logo.top+5},{cx,cy},{logo.left,logo.top+5}};
-    POINT left[] = {{logo.left,logo.top+5},{cx,cy},{cx,logo.bottom},{logo.left,logo.bottom-5}};
-    POINT right[] = {{cx,cy},{logo.right,logo.top+5},{logo.right,logo.bottom-5},{cx,logo.bottom}};
-    const auto polygon = [dc](POINT* points, COLORREF color) {
-        const auto brush = CreateSolidBrush(color);
-        const auto old_brush = SelectObject(dc, brush);
-        const auto old_pen = SelectObject(dc, GetStockObject(NULL_PEN));
-        Polygon(dc, points, 4);
-        SelectObject(dc, old_pen); SelectObject(dc, old_brush); DeleteObject(brush);
-    };
-    polygon(top, RGB(68,170,180)); polygon(left, RGB(8,127,140)); polygon(right, RGB(11,91,108));
+    const auto logo = dialog_rect(window, {18,13,44,39});
+    const auto size = std::min(logo.right - logo.left, logo.bottom - logo.top);
+    DrawIconEx(dc, logo.left, logo.top, brand_icon_, size, size, 0, nullptr, DI_NORMAL);
     EndPaint(window, &paint);
 }
 void SettingsStyle::draw_button(HWND window, const DRAWITEMSTRUCT& draw) {

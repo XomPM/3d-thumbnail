@@ -1,6 +1,37 @@
 #pragma code_page(65001)
 #include <windows.h>
 #include "settings_ids.h"
+IDI_APP ICON "../assets/dmind.ico"
+
+1 VERSIONINFO
+FILEVERSION 0,5,1,0
+PRODUCTVERSION 0,5,1,0
+FILEFLAGSMASK 0x3fL
+FILEFLAGS 0x0L
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "041204b0"
+        BEGIN
+            VALUE "CompanyName", "DMIND\0"
+            VALUE "FileDescription", "3D Thumbnail 설정\0"
+            VALUE "FileVersion", "0.5.1\0"
+            VALUE "InternalName", "thumbnail-settings\0"
+            VALUE "LegalCopyright", "Copyright (c) 2026 DMIND\0"
+            VALUE "OriginalFilename", "thumbnail-settings.exe\0"
+            VALUE "ProductName", "3D Thumbnail\0"
+            VALUE "ProductVersion", "0.5.1\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0412, 1200
+    END
+END
+
 IDD_SETTINGS DIALOGEX 0, 0, 460, 374
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX
 CAPTION "3D Thumbnail 설정"
