@@ -1,0 +1,108 @@
+cmake_minimum_required(VERSION 3.24)
+project(ThreeDThumbnail VERSION 0.5.0 LANGUAGES C CXX)
+
+if(NOT WIN32)
+    message(FATAL_ERROR "This prototype requires Windows and the Windows SDK.")
+endif()
+
+include(cmake/Dependencies.cmake)
+
+add_library(thumbnail_appearance STATIC src/appearance.cpp)
+target_include_directories(thumbnail_appearance PUBLIC include)
+target_compile_features(thumbnail_appearance PUBLIC cxx_std_20)
+target_compile_definitions(thumbnail_appearance PUBLIC UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+target_compile_options(thumbnail_appearance PRIVATE /W4 /permissive- /utf-8)
+target_link_libraries(thumbnail_appearance PRIVATE advapi32)
+
+add_library(thumbnail_core STATIC
+    src/stl_reader.cpp
+    src/model_reader.cpp
+    src/step_reader.cpp
+    src/obj_reader.cpp
+    src/gltf_resources.cpp
+    src/three_mf_reader.cpp
+    src/renderer.cpp
+    src/png_writer.cpp
+)
+target_include_directories(thumbnail_core PUBLIC include)
+target_include_directories(thumbnail_core SYSTEM PRIVATE "${ASSIMP_SOURCE}/contrib/rapidjson/include")
+target_compile_features(thumbnail_core PUBLIC cxx_std_20)
+target_compile_definitions(thumbnail_core PUBLIC UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+target_compile_options(thumbnail_core PRIVATE /W4 /permissive- /utf-8)
+target_link_libraries(thumbnail_core PRIVATE d3d11 d3dcompiler windowscodecs ole32
+    thumbnail_occt thumbnail_lib3mf assimp PUBLIC thumbnail_appearance)
+
+add_library(thumbnail_process STATIC src/process_runner.cpp)
+target_include_directories(thumbnail_process PUBLIC include)
+target_compile_features(thumbnail_process PUBLIC cxx_std_20)
+target_compile_definitions(thumbnail_process PUBLIC UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+target_compile_options(thumbnail_process PRIVATE /W4 /permissive- /utf-8)
+
+add_executable(thumbnail-worker src/main.cpp)
+target_link_libraries(thumbnail-worker PRIVATE thumbnail_core)
+target_compile_options(thumbnail-worker PRIVATE /W4 /permissive- /utf-8)
+
+add_executable(thumbnail-cli src/cli_main.cpp)
+target_link_libraries(thumbnail-cli PRIVATE thumbnail_process)
+add_dependencies(thumbnail-cli thumbnail-worker)
+target_compile_options(thumbnail-cli PRIVATE /W4 /permissive- /utf-8)
+
+add_library(thumbnail_shell_support STATIC src/stream_thumbnail.cpp)
+target_link_libraries(thumbnail_shell_support PUBLIC thumbnail_process PRIVATE ole32 windowscodecs advapi32 gdi32)
+target_include_directories(thumbnail_shell_support PUBLIC src)
+target_compile_options(thumbnail_shell_support PRIVATE /W4 /permissive- /utf-8)
+add_library(thumbnail-shell SHARED src/shell_provider.cpp src/shell_provider.def)
+target_link_libraries(thumbnail-shell PRIVATE thumbnail_shell_support shell32)
+target_compile_options(thumbnail-shell PRIVATE /W4 /permissive- /utf-8)
+add_dependencies(thumbnail-shell thumbnail-worker)
+add_executable(shell-probe src/shell_probe.cpp src/png_writer.cpp)
+add_library(thumbnail_cache STATIC src/shell_cache.cpp)
+target_link_libraries(thumbnail_cache PUBLIC thumbnail_process PRIVATE shell32 ole32)
+target_compile_options(thumbnail_cache PRIVATE /W4 /permissive- /utf-8)
+target_link_libraries(shell-probe PRIVATE thumbnail_process thumbnail_cache ole32 shell32 shlwapi windowscodecs gdi32 user32)
+target_compile_options(shell-probe PRIVATE /W4 /permissive- /utf-8)
+add_dependencies(shell-probe thumbnail-shell)
+
+add_executable(thumbnail-settings WIN32 src/settings_main.cpp src/settings_style.cpp src/settings.rc src/renderer.cpp src/settings.manifest)
+target_link_libraries(thumbnail-settings PRIVATE thumbnail_appearance thumbnail_cache comdlg32 ole32 shell32 gdi32 user32 d3d11 d3dcompiler)
+target_compile_options(thumbnail-settings PRIVATE /W4 /permissive- /utf-8)
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(appearance-tests tests/appearance_tests.cpp)
+    target_link_libraries(appearance-tests PRIVATE thumbnail_appearance advapi32)
+    target_compile_options(appearance-tests PRIVATE /W4 /permissive- /utf-8)
+    add_test(NAME thumbnail-appearance COMMAND appearance-tests)
+    set_tests_properties(thumbnail-appearance PROPERTIES TIMEOUT 15)
+    add_executable(make-step-samples scripts/make_step_samples.cpp)
+    target_link_libraries(make-step-samples PRIVATE thumbnail_occt)
+    target_compile_features(make-step-samples PRIVATE cxx_std_20)
+    target_compile_definitions(make-step-samples PRIVATE NOMINMAX)
+    target_compile_options(make-step-samples PRIVATE /utf-8)
+    add_executable(thumbnail-tests tests/core_tests.cpp)
+    target_link_libraries(thumbnail-tests PRIVATE thumbnail_core)
+    target_compile_options(thumbnail-tests PRIVATE /W4 /permissive- /utf-8)
+    add_test(NAME thumbnail-core COMMAND thumbnail-tests)
+    set_tests_properties(thumbnail-core PROPERTIES TIMEOUT 60)
+    add_executable(format-tests tests/format_tests.cpp)
+    target_link_libraries(format-tests PRIVATE thumbnail_core)
+    target_compile_options(format-tests PRIVATE /W4 /permissive- /utf-8)
+    add_test(NAME thumbnail-formats COMMAND format-tests "${CMAKE_SOURCE_DIR}/samples" "${CMAKE_BINARY_DIR}/test-output")
+    set_tests_properties(thumbnail-formats PROPERTIES TIMEOUT 60)
+    add_executable(process-fixture tests/process_fixture.cpp)
+    target_compile_features(process-fixture PRIVATE cxx_std_20)
+    target_compile_definitions(process-fixture PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+    target_compile_options(process-fixture PRIVATE /utf-8)
+    add_executable(process-tests tests/process_tests.cpp)
+    target_link_libraries(process-tests PRIVATE thumbnail_process)
+    target_compile_options(process-tests PRIVATE /W4 /permissive- /utf-8)
+    add_dependencies(process-tests process-fixture thumbnail-worker)
+    add_test(NAME thumbnail-process COMMAND process-tests "${CMAKE_SOURCE_DIR}/samples" "${CMAKE_BINARY_DIR}/test-output")
+    set_tests_properties(thumbnail-process PROPERTIES TIMEOUT 60)
+    add_executable(shell-tests tests/shell_tests.cpp)
+    target_link_libraries(shell-tests PRIVATE thumbnail_shell_support shlwapi)
+    target_compile_options(shell-tests PRIVATE /W4 /permissive- /utf-8)
+    add_dependencies(shell-tests thumbnail-shell process-fixture)
+    add_test(NAME thumbnail-shell COMMAND shell-tests "${CMAKE_SOURCE_DIR}/samples" "${CMAKE_BINARY_DIR}/test-output")
+    set_tests_properties(thumbnail-shell PROPERTIES TIMEOUT 90)
+endif()

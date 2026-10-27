@@ -1,0 +1,29 @@
+{
+  "platform": "windows-x64",
+  "packages": [
+    {
+      "name": "nsis",
+      "version": "3.13",
+      "url": "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.13/nsis-3.13.zip",
+      "sha256": "ba63dffc4410ee89193e1cb5a41989991bd77c61068da17e3156d136b7b0b3d8"
+    },
+    {
+      "name": "occt-source",
+      "version": "7.9.3",
+      "url": "https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_3.zip",
+      "sha256": "566a236b5a22e778dbe1c3dce6560ba12db4504bbdae0354c51dd2f4728756ee"
+    },
+    {
+      "name": "assimp-source",
+      "version": "6.0.5",
+      "url": "https://github.com/assimp/assimp/archive/refs/tags/v6.0.5.zip",
+      "sha256": "89e477e89df739ecc7dd21874897ac2e70c8944eb1074fbdbbdbf4dd2de6a403"
+    },
+    {
+      "name": "lib3mf",
+      "version": "2.5.0",
+      "url": "https://github.com/3MFConsortium/lib3mf/releases/download/v2.5.0/lib3mf-2.5.0-Windows.zip",
+      "sha256": "8e185bc19e5d544c3c1e489fd8f8fcecfb0530def36e5c8bcc81bebf2ac96aa1"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "formats": [
+    { "name": "STL", "clsid": "{9294D38E-9FC3-4B17-BACE-3B7E17A64FC5}", "extensions": [".stl"] },
+    { "name": "OBJ", "clsid": "{5EC0C606-A1DE-4A1A-B4BF-6B85D6F8103D}", "extensions": [".obj"] },
+    { "name": "3MF", "clsid": "{E0BD8EEC-1C3D-4A06-BADA-48AEF75BB4FF}", "extensions": [".3mf"] },
+    { "name": "STEP", "clsid": "{2F765D12-3617-46D2-B6F6-AF981B87A2EC}", "extensions": [".step", ".stp"] },
+    { "name": "PLY", "clsid": "{5FC3B8F4-6479-408F-9A2F-2C6F01F6B84D}", "extensions": [".ply"] },
+    { "name": "GLB", "clsid": "{0F9A7EE9-D78E-445F-954F-61DF76DADD11}", "extensions": [".glb"] },
+    { "name": "glTF", "clsid": "{A55CE7F0-0C63-43BE-99D0-CDFB072A75CC}", "extensions": [".gltf"] },
+    { "name": "IGES", "clsid": "{F1BAA4D2-2014-4267-90B9-2D5757D0D328}", "extensions": [".iges", ".igs"] },
+    { "name": "FBX", "clsid": "{F8F8BD71-5A83-4CE2-9540-79B84C220280}", "extensions": [".fbx"] }
+  ]
+}

@@ -1,0 +1,34 @@
+name: Build Windows preview
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare pinned dependencies
+        shell: pwsh
+        run: ./scripts/setup-dependencies.ps1
+      - name: Build CAD runtime
+        shell: pwsh
+        run: ./scripts/build-occt.ps1 -Jobs 4
+      - name: Build and test
+        shell: pwsh
+        run: ./scripts/build.ps1
+      - name: Test registration recovery
+        shell: pwsh
+        run: ./tests/registration_tests.ps1
+      - name: Build installer
+        shell: pwsh
+        run: ./scripts/package.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64-preview
+          path: |
+            out/*-Setup.exe
+            out/*-Setup.exe.sha256
+            .deps/downloads/occt-source-7.9.3.zip
+          retention-days: 14

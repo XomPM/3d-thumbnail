@@ -1,0 +1,17 @@
+Microsoft Visual C++ release runtime
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+The unmodified x64 runtime binaries included with a binary release are Microsoft
+Distributable Code, not covered by this project's MIT license. They are copied
+from Visual Studio 2022's VC/Redist/MSVC release directory; debug runtimes and
+Windows system libraries are not distributed.
+
+Applicable Visual Studio license terms:
+https://visualstudio.microsoft.com/license-terms/
+Distributable Code list:
+https://learn.microsoft.com/en-us/visualstudio/releases/2022/redistribution
+Deployment documentation:
+https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files
+
+Rebuilders must use a properly licensed Visual Studio installation and follow
+its Distributable Code terms. Microsoft runtimes are used only with this program.

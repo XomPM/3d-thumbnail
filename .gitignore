@@ -1,0 +1,16 @@
+/build/
+/out/
+/.deps/
+/.local/
+/.vs/
+/CMakeUserPresets.json
+*.user
+/.agents/
+/.codex/
+/AGENTS.md
+/SKILL.md
+/PROGRESS.md
+/DEVELOPMENT_PLAN.md
+*.pdb
+*.ilk
+*.log
