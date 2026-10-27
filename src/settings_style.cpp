@@ -58,7 +58,7 @@ void SettingsStyle::paint(HWND window) {
     const auto dc = BeginPaint(window, &paint);
     RECT bounds{}; GetClientRect(window, &bounds);
     FillRect(dc, &bounds, background_);
-    for (const auto rectangle : {RECT{16,74,224,250}, RECT{236,74,444,250}, RECT{16,262,444,336}}) {
+    for (const auto rectangle : {RECT{16,74,224,308}, RECT{236,74,444,308}, RECT{16,320,444,394}}) {
         rounded(dc, dialog_rect(window, rectangle), RGB(255,255,255), kBorder, 14);
     }
     const auto logo = dialog_rect(window, {18,13,44,39});
@@ -97,8 +97,8 @@ INT_PTR SettingsStyle::control_color(HWND window, HDC dc, HWND control, bool edi
     if (edit) { SetBkColor(dc, RGB(255,255,255)); return reinterpret_cast<INT_PTR>(surface_); }
     RECT rectangle{}; GetWindowRect(control, &rectangle);
     MapWindowPoints(nullptr, window, reinterpret_cast<POINT*>(&rectangle), 2);
-    const auto top_card = dialog_rect(window, {16,74,444,250});
-    const auto lower_card = dialog_rect(window, {16,262,444,336});
+    const auto top_card = dialog_rect(window, {16,74,444,308});
+    const auto lower_card = dialog_rect(window, {16,320,444,394});
     const POINT origin{rectangle.left,rectangle.top};
     return reinterpret_cast<INT_PTR>((PtInRect(&top_card,origin) || PtInRect(&lower_card,origin)) ? surface_ : background_);
 }

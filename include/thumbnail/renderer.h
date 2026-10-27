@@ -12,7 +12,7 @@ namespace thumbnail {
 struct Image {
     unsigned width{};
     unsigned height{};
-    std::vector<std::uint8_t> rgba;
+    std::vector<std::uint8_t> rgba; // Straight (not premultiplied) RGBA.
 };
 
 // Uses offscreen Direct3D 11 WARP; does not open a window or require a GPU.

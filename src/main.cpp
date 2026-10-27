@@ -20,8 +20,8 @@ std::wstring lowercase_extension(const std::filesystem::path& path) {
 }
 
 void show_usage() {
-    std::wcout << L"3D Thumbnail worker 0.5.1\n"
-               << L"Usage: thumbnail-cli INPUT OUTPUT.png [--size 64..1024] [--background #RRGGBB] [--model #RRGGBB]\n"
+    std::wcout << L"3D Thumbnail worker 1.0.0\n"
+               << L"Usage: thumbnail-cli INPUT OUTPUT.png [--size 64..1024] [--background #RRGGBB] [--model #RRGGBB] [--background-transparency 0..100]\n"
                << L"Formats: STL, STEP/STP, OBJ, 3MF, GLB/glTF, PLY, IGES/IGS, FBX. Default size 256.\n"
                << L"Output must not already exist. Run thumbnail-cli to enforce worker resource limits.\n";
 }
@@ -45,7 +45,7 @@ int wmain(int argc, wchar_t* argv[]) {
         show_usage();
         return 0;
     }
-    if (argc < 3 || argc > 9 || argc % 2 != 1) {
+    if (argc < 3 || argc > 11 || argc % 2 != 1) {
         show_usage();
         return 2;
     }
@@ -63,7 +63,8 @@ int wmain(int argc, wchar_t* argv[]) {
             if (option == L"--size") { size = parse_size(argv[index + 1]); }
             else if (option == L"--background") { appearance.background = thumbnail::parse_color(argv[index + 1]); }
             else if (option == L"--model") { appearance.model = thumbnail::parse_color(argv[index + 1]); }
-            else { throw std::runtime_error("Unknown option; use --size, --background or --model."); }
+            else if (option == L"--background-transparency") { appearance.background_transparency = thumbnail::parse_transparency(argv[index + 1]); }
+            else { throw std::runtime_error("Unknown option; use --size, --background, --model or --background-transparency."); }
         }
         if (std::filesystem::exists(output)) {
             throw std::runtime_error("Output already exists. Choose a new filename.");

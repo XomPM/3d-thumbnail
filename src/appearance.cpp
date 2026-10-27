@@ -33,23 +33,40 @@ std::wstring format_color(RgbColor color) {
     return text;
 }
 
+std::uint8_t parse_transparency(std::wstring_view text) {
+    if (text.empty() || text.size() > 3 || text.find_first_not_of(L"0123456789") != std::wstring_view::npos) {
+        throw std::invalid_argument("Background transparency must be a whole number from 0 to 100.");
+    }
+    unsigned value = 0;
+    for (const auto digit : text) { value = value * 10 + digit - L'0'; }
+    if (value > 100) { throw std::invalid_argument("Background transparency must be between 0 and 100."); }
+    return static_cast<std::uint8_t>(value);
+}
+
 Appearance load_appearance(const wchar_t* key) noexcept {
-    std::array<BYTE, 7> data{};
+    std::array<BYTE, 8> data{};
     DWORD length = static_cast<DWORD>(data.size());
-    const auto status = RegGetValueW(HKEY_CURRENT_USER, key, L"AppearanceV1", RRF_RT_REG_BINARY,
+    auto status = RegGetValueW(HKEY_CURRENT_USER, key, L"AppearanceV2", RRF_RT_REG_BINARY,
         nullptr, data.data(), &length);
-    if (status != ERROR_SUCCESS || length != data.size() || data[0] != 1) { return {}; }
-    return {{data[1], data[2], data[3]}, {data[4], data[5], data[6]}};
+    if (status == ERROR_FILE_NOT_FOUND) {
+        length = static_cast<DWORD>(data.size());
+        status = RegGetValueW(HKEY_CURRENT_USER, key, L"AppearanceV1", RRF_RT_REG_BINARY, nullptr, data.data(), &length);
+        if (status != ERROR_SUCCESS || length != 7 || data[0] != 1) { return {}; }
+        return {{data[1], data[2], data[3]}, {data[4], data[5], data[6]}, 0};
+    }
+    if (status != ERROR_SUCCESS || length != data.size() || data[0] != 2 || data[7] > 100) { return {}; }
+    return {{data[1], data[2], data[3]}, {data[4], data[5], data[6]}, data[7]};
 }
 
 void save_appearance(const Appearance& appearance, const wchar_t* key) {
+    if (appearance.background_transparency > 100) { throw std::invalid_argument("Invalid background transparency."); }
     HKEY opened{};
     if (RegCreateKeyExW(HKEY_CURRENT_USER, key, 0, nullptr, 0, KEY_SET_VALUE, nullptr, &opened, nullptr) != ERROR_SUCCESS) {
         throw std::runtime_error("Cannot open appearance settings for writing.");
     }
-    const std::array<BYTE, 7> data{1, appearance.background.red, appearance.background.green,
-        appearance.background.blue, appearance.model.red, appearance.model.green, appearance.model.blue};
-    const auto status = RegSetValueExW(opened, L"AppearanceV1", 0, REG_BINARY, data.data(), static_cast<DWORD>(data.size()));
+    const std::array<BYTE, 8> data{2, appearance.background.red, appearance.background.green,
+        appearance.background.blue, appearance.model.red, appearance.model.green, appearance.model.blue, appearance.background_transparency};
+    const auto status = RegSetValueExW(opened, L"AppearanceV2", 0, REG_BINARY, data.data(), static_cast<DWORD>(data.size()));
     RegCloseKey(opened);
     if (status != ERROR_SUCCESS) { throw std::runtime_error("Cannot save appearance settings."); }
 }

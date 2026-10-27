@@ -64,7 +64,7 @@ ComPtr<ID3DBlob> compile_shader(const char* entry, const char* profile) {
     return code;
 }
 
-void draw_mesh(RenderContext& render, const std::vector<RenderVertex>& vertices, unsigned size, RgbColor background_color) {
+void draw_mesh(RenderContext& render, const std::vector<RenderVertex>& vertices, unsigned size, const Appearance& appearance) {
     const auto vertex_code = compile_shader("vertex_main", "vs_5_0");
     const auto pixel_code = compile_shader("pixel_main", "ps_5_0");
     ComPtr<ID3D11VertexShader> vertex_shader;
@@ -94,8 +94,9 @@ void draw_mesh(RenderContext& render, const std::vector<RenderVertex>& vertices,
     raster_description.DepthClipEnable = TRUE;
     ComPtr<ID3D11RasterizerState> raster_state;
     check_hresult(render.device->CreateRasterizerState(&raster_description, &raster_state), "Create rasterizer");
-    const float background[] = {background_color.red / 255.0f, background_color.green / 255.0f,
-        background_color.blue / 255.0f, 1.0f};
+    const auto color = appearance.background;
+    const auto alpha = ((100U - appearance.background_transparency) * 255U + 50U) / 100U;
+    const float background[] = {color.red / 255.0f, color.green / 255.0f, color.blue / 255.0f, alpha / 255.0f};
     render.context->ClearRenderTargetView(render.target_view.Get(), background);
     render.context->ClearDepthStencilView(render.depth_view.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
     render.context->OMSetRenderTargets(1, render.target_view.GetAddressOf(), render.depth_view.Get());
@@ -127,17 +128,22 @@ Image read_image(RenderContext& render, unsigned size) {
     const auto* pixels = static_cast<const std::uint8_t*>(mapped.pData);
     for (unsigned y = 0; y < size; ++y) {
         for (unsigned x = 0; x < size; ++x) {
-            for (unsigned channel = 0; channel < 4; ++channel) {
-                unsigned sum = 0;
-                for (unsigned dy = 0; dy < kSupersampling; ++dy) {
-                    for (unsigned dx = 0; dx < kSupersampling; ++dx) {
-                        sum += pixels[(y * kSupersampling + dy) * mapped.RowPitch +
-                            (x * kSupersampling + dx) * 4 + channel];
-                    }
+            unsigned alpha_sum = 0;
+            unsigned weighted[3]{};
+            for (unsigned dy = 0; dy < kSupersampling; ++dy) {
+                for (unsigned dx = 0; dx < kSupersampling; ++dx) {
+                    const auto* sample = pixels + (y * kSupersampling + dy) * mapped.RowPitch + (x * kSupersampling + dx) * 4;
+                    alpha_sum += sample[3];
+                    for (unsigned channel = 0; channel < 3; ++channel) { weighted[channel] += sample[channel] * sample[3]; }
                 }
-                image.rgba[(static_cast<std::size_t>(y) * size + x) * 4 + channel] =
-                    static_cast<std::uint8_t>(sum / (kSupersampling * kSupersampling));
             }
+            const auto offset = (static_cast<std::size_t>(y) * size + x) * 4;
+            // Average in premultiplied space, then return straight RGBA for PNG encoding.
+            // Hidden background colors must not contaminate partially covered model edges.
+            for (unsigned channel = 0; channel < 3; ++channel) {
+                image.rgba[offset + channel] = static_cast<std::uint8_t>(alpha_sum ? weighted[channel] / alpha_sum : 0);
+            }
+            image.rgba[offset + 3] = static_cast<std::uint8_t>(alpha_sum / (kSupersampling * kSupersampling));
         }
     }
     render.context->Unmap(staging.Get(), 0);
@@ -147,12 +153,13 @@ Image read_image(RenderContext& render, unsigned size) {
 } // namespace
 
 Image render_thumbnail(const Mesh& mesh, unsigned size, const Appearance& appearance) {
+    if (appearance.background_transparency > 100) { throw std::invalid_argument("Invalid background transparency."); }
     if (size < 64 || size > 1024) {
         throw std::runtime_error("Thumbnail size must be between 64 and 1024 pixels.");
     }
     const auto vertices = prepare_vertices(mesh, appearance.model);
     auto context = create_context(size * kSupersampling);
-    draw_mesh(context, vertices, size * kSupersampling, appearance.background);
+    draw_mesh(context, vertices, size * kSupersampling, appearance);
     return read_image(context, size);
 }
 

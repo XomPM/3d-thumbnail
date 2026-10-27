@@ -100,6 +100,22 @@ void renderer_tests() {
         if (custom.rgba[offset] > 100 && custom.rgba[offset + 1] < 50 && custom.rgba[offset + 2] < 35) { ++red_pixels; }
     }
     require(red_pixels > 100, "Custom model color or lighting was lost.");
+    const auto transparent = render_thumbnail(mesh, 128, {{255,0,0},{214,214,214},100});
+    const auto other_background = render_thumbnail(mesh, 128, {{0,255,0},{214,214,214},100});
+    require(transparent.rgba == other_background.rgba, "Hidden background contaminated model edges.");
+    require(transparent.rgba[3] == 0, "Transparent corner is not transparent.");
+    const auto half = render_thumbnail(mesh, 128, {{11,22,33},{214,214,214},50});
+    require(half.rgba[0] == 11 && half.rgba[1] == 22 && half.rgba[2] == 33 && half.rgba[3] == 128, "Half-transparent background changed.");
+    unsigned solid = 0, edge = 0;
+    for (std::size_t offset = 0; offset < transparent.rgba.size(); offset += 4) {
+        const auto alpha = transparent.rgba[offset + 3];
+        if (alpha == 255) {
+            ++solid;
+            require(half.rgba[offset + 3] == 255 && half.rgba[offset] == transparent.rgba[offset], "Background transparency changed solid model pixels.");
+        } else if (alpha > 0) { ++edge; }
+    }
+    require(solid > 100 && edge > 0, "Missing opaque model or antialiased edges.");
+    require_failure([&] { render_thumbnail(mesh, 128, {{},{},101}); });
     auto reversed = mesh;
     std::swap(reversed.triangles[0][1], reversed.triangles[0][2]);
     check_visible(render_thumbnail(reversed, 64));

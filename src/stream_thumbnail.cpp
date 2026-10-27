@@ -140,7 +140,11 @@ Bitmap decode_bitmap(const std::filesystem::path& path, UINT render_size, UINT r
     checked(frame->GetSize(&width, &height));
     if (width != render_size || height != render_size) { checked(HRESULT_FROM_WIN32(ERROR_INVALID_DATA)); }
     ComPtr<IWICBitmapSource> source;
-    checked(frame.As(&source));
+    ComPtr<IWICFormatConverter> converter;
+    checked(factory->CreateFormatConverter(&converter));
+    checked(converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone,
+        nullptr, 0, WICBitmapPaletteTypeCustom));
+    checked(converter.As(&source)); // Scale associated colors to avoid dark/colored fringes.
     const auto size = std::min(render_size, requested_size);
     if (size != render_size) {
         ComPtr<IWICBitmapScaler> scaler;
@@ -148,10 +152,6 @@ Bitmap decode_bitmap(const std::filesystem::path& path, UINT render_size, UINT r
         checked(scaler->Initialize(source.Get(), size, size, WICBitmapInterpolationModeFant));
         checked(scaler.As(&source));
     }
-    ComPtr<IWICFormatConverter> converter;
-    checked(factory->CreateFormatConverter(&converter));
-    checked(converter->Initialize(source.Get(), GUID_WICPixelFormat32bppBGRA, WICBitmapDitherTypeNone,
-        nullptr, 0, WICBitmapPaletteTypeCustom));
     BITMAPINFO information{};
     information.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     information.bmiHeader.biWidth = static_cast<LONG>(size);
@@ -162,7 +162,7 @@ Bitmap decode_bitmap(const std::filesystem::path& path, UINT render_size, UINT r
     void* pixels{};
     Bitmap bitmap(CreateDIBSection(nullptr, &information, DIB_RGB_COLORS, &pixels, nullptr, 0));
     if (!bitmap) { checked(E_OUTOFMEMORY); }
-    checked(converter->CopyPixels(nullptr, size * 4, size * size * 4, static_cast<BYTE*>(pixels)));
+    checked(source->CopyPixels(nullptr, size * 4, size * size * 4, static_cast<BYTE*>(pixels)));
     return bitmap;
 }
 }
@@ -195,7 +195,7 @@ static HRESULT thumbnail_impl(IStream* stream, const std::filesystem::path* sour
         if (result.exit_code != 0) { return HRESULT_FROM_WIN32(ERROR_INVALID_DATA); }
         auto image = decode_bitmap(workspace.output(), render_size, size);
         *bitmap = image.release();
-        *alpha = WTSAT_RGB;
+        *alpha = WTSAT_ARGB;
         return S_OK;
     } catch (const HResultFailure& failure) { return failure.code; }
       catch (const std::bad_alloc&) { return E_OUTOFMEMORY; }

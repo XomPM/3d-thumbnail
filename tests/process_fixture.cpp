@@ -3,6 +3,7 @@
 #include <string>
 #include <filesystem>
 #include <fstream>
+#include "thumbnail/renderer.h"
 
 int wmain(int argc, wchar_t** argv) {
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
@@ -11,6 +12,18 @@ int wmain(int argc, wchar_t** argv) {
         std::ifstream input{std::filesystem::path(argv[1])};
         std::string action;
         input >> action;
+        if (action == "alpha") {
+            thumbnail::Image image{64,64,std::vector<std::uint8_t>(64*64*4)};
+            for (unsigned y = 0; y < 64; ++y) {
+                for (unsigned x = 0; x < 64; ++x) {
+                    const auto offset = (y * 64 + x) * 4;
+                    image.rgba[offset] = 200; image.rgba[offset+1] = 100; image.rgba[offset+2] = 50;
+                    image.rgba[offset+3] = (x < 8 && y < 8) ? 0 : x < 32 ? 128 : 255;
+                }
+            }
+            thumbnail::write_png(image, std::filesystem::path(argv[2]));
+            return 0;
+        }
         if (action == "sleep") { Sleep(10000); }
         if (action == "partial") { std::ofstream(std::filesystem::path(argv[2])) << "incomplete PNG"; }
         return action == "failure" ? 1 : 0;

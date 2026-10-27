@@ -4,6 +4,7 @@
 #include "settings_ids.h"
 #include "settings_style.h"
 #include <commdlg.h>
+#include <commctrl.h>
 #include <shobjidl.h>
 #include <wrl/client.h>
 #include <algorithm>
@@ -50,16 +51,28 @@ RgbColor read_color(HWND window, int control) {
     return parse_color(text);
 }
 Appearance read_colors(HWND window) {
-    return {read_color(window, IDC_BACKGROUND), read_color(window, IDC_MODEL)};
+    wchar_t text[8]{};
+    GetDlgItemTextW(window, IDC_TRANSPARENCY, text, 8);
+    return {read_color(window, IDC_BACKGROUND), read_color(window, IDC_MODEL), parse_transparency(text)};
 }
 void set_colors(HWND window, const Appearance& colors) {
     SetDlgItemTextW(window, IDC_BACKGROUND, format_color(colors.background).c_str());
     SetDlgItemTextW(window, IDC_MODEL, format_color(colors.model).c_str());
+    SetDlgItemInt(window, IDC_TRANSPARENCY, colors.background_transparency, FALSE);
+    SendDlgItemMessageW(window, IDC_TRANSPARENCY_SLIDER, TBM_SETPOS, TRUE, colors.background_transparency);
 }
 void update_preview(HWND window, SettingsWindow& state) {
     state.style.colors = read_colors(window);
-    state.preview = render_thumbnail(preview_mesh(), 256, state.style.colors);
+    SendDlgItemMessageW(window, IDC_TRANSPARENCY_SLIDER, TBM_SETPOS, TRUE, state.style.colors.background_transparency);
+    state.preview = render_thumbnail(preview_mesh(), 512, state.style.colors);
     for (std::size_t i = 0; i < state.preview.rgba.size(); i += 4) {
+        const auto pixel = i / 4;
+        const unsigned checker = ((pixel % state.preview.width / 12 + pixel / state.preview.width / 12) % 2) ? 224 : 248;
+        const unsigned alpha = state.preview.rgba[i + 3];
+        for (unsigned channel = 0; channel < 3; ++channel) {
+            state.preview.rgba[i + channel] = static_cast<std::uint8_t>((state.preview.rgba[i + channel] * alpha + checker * (255 - alpha) + 127) / 255);
+        }
+        state.preview.rgba[i + 3] = 255; // Checkerboard belongs only to this preview, never the PNG.
         std::swap(state.preview.rgba[i], state.preview.rgba[i + 2]);
     }
     InvalidateRect(GetDlgItem(window, IDC_PREVIEW), nullptr, FALSE);
@@ -127,7 +140,7 @@ void post_status(HWND window, UINT message, std::wstring text) {
 }
 void set_busy(HWND window, SettingsWindow& state, bool busy) {
     state.refreshing = busy;
-    for (const int control : {IDC_SAVE,IDC_DEFAULTS,IDC_REFRESH_FILE,IDC_REFRESH_FOLDER,IDC_BACKGROUND,IDC_MODEL,IDC_PICK_BACKGROUND,IDC_PICK_MODEL}) {
+    for (const int control : {IDC_SAVE,IDC_DEFAULTS,IDC_REFRESH_FILE,IDC_REFRESH_FOLDER,IDC_BACKGROUND,IDC_MODEL,IDC_PICK_BACKGROUND,IDC_PICK_MODEL,IDC_TRANSPARENCY,IDC_TRANSPARENCY_SLIDER}) {
         EnableWindow(GetDlgItem(window, control), !busy);
     }
     EnableWindow(GetDlgItem(window, IDC_CANCEL_REFRESH), busy);
@@ -177,11 +190,18 @@ INT_PTR CALLBACK settings_dialog(HWND window, UINT message, WPARAM wparam, LPARA
             SetWindowLongPtrW(window, DWLP_USER, lparam);
             state->style.initialize(window);
             for (const auto control : {IDC_BACKGROUND, IDC_MODEL}) { SendDlgItemMessageW(window, control, EM_SETLIMITTEXT, 7, 0); }
+            SendDlgItemMessageW(window, IDC_TRANSPARENCY, EM_SETLIMITTEXT, 3, 0);
+            SendDlgItemMessageW(window, IDC_TRANSPARENCY_SLIDER, TBM_SETRANGE, TRUE, MAKELPARAM(0, 100));
+            SendDlgItemMessageW(window, IDC_TRANSPARENCY_SLIDER, TBM_SETPAGESIZE, 0, 10);
             set_colors(window, load_appearance());
             update_preview(window, *state);
             return TRUE;
         }
         if (!state) { return FALSE; }
+        if (message == WM_HSCROLL && reinterpret_cast<HWND>(lparam) == GetDlgItem(window, IDC_TRANSPARENCY_SLIDER)) {
+            SetDlgItemInt(window, IDC_TRANSPARENCY, static_cast<UINT>(SendDlgItemMessageW(window, IDC_TRANSPARENCY_SLIDER, TBM_GETPOS, 0, 0)), FALSE);
+            return TRUE;
+        }
         if (message == WM_PAINT) { state->style.paint(window); return TRUE; }
         if (message == WM_CTLCOLORDLG) { return reinterpret_cast<INT_PTR>(state->style.background()); }
         if (message == WM_CTLCOLORSTATIC || message == WM_CTLCOLOREDIT) {
@@ -201,7 +221,7 @@ INT_PTR CALLBACK settings_dialog(HWND window, UINT message, WPARAM wparam, LPARA
         if (message == WM_TIMER) {
             KillTimer(window, 1);
             try { update_preview(window, *state); }
-            catch (const std::invalid_argument&) { SetDlgItemTextW(window, IDC_STATUS, L"색상은 #RRGGBB 형식으로 입력하세요. 예: #2B2B2B"); }
+            catch (const std::invalid_argument&) { SetDlgItemTextW(window, IDC_STATUS, L"색상은 #RRGGBB, 배경 투명도는 0~100으로 입력하세요."); }
             return TRUE;
         }
         if (message == WM_CLOSE || (message == WM_COMMAND && LOWORD(wparam) == IDCANCEL)) {
@@ -221,7 +241,7 @@ INT_PTR CALLBACK settings_dialog(HWND window, UINT message, WPARAM wparam, LPARA
             update_preview(window, *state);
             SetDlgItemTextW(window, IDC_STATUS, L"저장했습니다. 기존 썸네일은 아래에서 파일이나 폴더를 선택해 갱신하세요.");
             break;
-        case IDC_DEFAULTS: set_colors(window, {}); SetDlgItemTextW(window, IDC_STATUS, L"기본 색상을 불러왔습니다. ‘색상 저장’을 누르면 적용됩니다."); break;
+        case IDC_DEFAULTS: set_colors(window, {}); SetDlgItemTextW(window, IDC_STATUS, L"기본 설정을 불러왔습니다. ‘설정 저장’을 누르면 적용됩니다."); break;
         case IDC_REFRESH_FILE: refresh_selection(window, *state, false); break;
         case IDC_REFRESH_FOLDER: refresh_selection(window, *state, true); break;
         case IDC_CANCEL_REFRESH: state->refresh_thread.request_stop(); SetDlgItemTextW(window, IDC_STATUS, L"현재 파일의 갱신이 끝나면 중단합니다."); break;
@@ -238,6 +258,8 @@ INT_PTR CALLBACK settings_dialog(HWND window, UINT message, WPARAM wparam, LPARA
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
     try {
         SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        INITCOMMONCONTROLSEX controls{sizeof(controls), ICC_BAR_CLASSES};
+        if (!InitCommonControlsEx(&controls)) { throw std::runtime_error("Cannot initialize settings controls."); }
         const thumbnail::ComApartment apartment(COINIT_APARTMENTTHREADED);
         SettingsWindow state;
         if (DialogBoxParamW(instance, MAKEINTRESOURCEW(IDD_SETTINGS), nullptr, settings_dialog, reinterpret_cast<LPARAM>(&state)) == -1) {

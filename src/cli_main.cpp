@@ -5,15 +5,15 @@
 
 int wmain(int argc, wchar_t** argv) {
     if (argc == 2 && std::wstring(argv[1]) == L"--help") {
-        std::cout << "3D Thumbnail 0.5.1\n"
-                  << "Usage: thumbnail-cli INPUT OUTPUT.png [--size 64..1024] [--background #RRGGBB] [--model #RRGGBB]\n"
+        std::cout << "3D Thumbnail 1.0.0\n"
+                  << "Usage: thumbnail-cli INPUT OUTPUT.png [--size 64..1024] [--background #RRGGBB] [--model #RRGGBB] [--background-transparency 0..100]\n"
                   << "Formats: STL, STEP/STP, OBJ, 3MF, GLB/glTF, PLY, IGES/IGS, FBX. Default size 256.\n"
                   << "Worker limits: 15 seconds, 1 GiB committed memory, one process.\n"
                   << "Output must not already exist. Explorer integration requires separate registration; see docs/shell-integration.md.\n";
         return 0;
     }
-    if (argc < 3 || argc > 9 || argc % 2 != 1) {
-        std::cerr << "Usage: thumbnail-cli INPUT OUTPUT.png [--size 64..1024] [--background #RRGGBB] [--model #RRGGBB]\n";
+    if (argc < 3 || argc > 11 || argc % 2 != 1) {
+        std::cerr << "Usage: thumbnail-cli INPUT OUTPUT.png [--size 64..1024] [--background #RRGGBB] [--model #RRGGBB] [--background-transparency 0..100]\n";
         return 2;
     }
     try {

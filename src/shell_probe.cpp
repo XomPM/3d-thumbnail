@@ -69,7 +69,11 @@ void save_bitmap(HBITMAP bitmap, const std::filesystem::path& output) {
     if (copied != static_cast<int>(image.height)) { throw std::runtime_error("Cannot read Shell bitmap."); }
     for (std::size_t offset = 0; offset < image.rgba.size(); offset += 4) {
         std::swap(image.rgba[offset], image.rgba[offset + 2]);
-        image.rgba[offset + 3] = 255;
+        const unsigned alpha = image.rgba[offset + 3];
+        for (unsigned channel = 0; channel < 3; ++channel) {
+            image.rgba[offset + channel] = static_cast<std::uint8_t>(alpha ?
+                std::min(255U, (image.rgba[offset + channel] * 255U + alpha / 2) / alpha) : 0);
+        }
     }
     write_png(image, output);
 }

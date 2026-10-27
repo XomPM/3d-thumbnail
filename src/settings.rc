@@ -1,11 +1,12 @@
 #pragma code_page(65001)
 #include <windows.h>
+#include <commctrl.h>
 #include "settings_ids.h"
 IDI_APP ICON "../assets/dmind.ico"
 
 1 VERSIONINFO
-FILEVERSION 0,5,1,0
-PRODUCTVERSION 0,5,1,0
+FILEVERSION 1,0,0,0
+PRODUCTVERSION 1,0,0,0
 FILEFLAGSMASK 0x3fL
 FILEFLAGS 0x0L
 FILEOS VOS_NT_WINDOWS32
@@ -18,12 +19,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "DMIND\0"
             VALUE "FileDescription", "3D Thumbnail 설정\0"
-            VALUE "FileVersion", "0.5.1\0"
+            VALUE "FileVersion", "1.0.0\0"
             VALUE "InternalName", "thumbnail-settings\0"
             VALUE "LegalCopyright", "Copyright (c) 2026 DMIND\0"
             VALUE "OriginalFilename", "thumbnail-settings.exe\0"
             VALUE "ProductName", "3D Thumbnail\0"
-            VALUE "ProductVersion", "0.5.1\0"
+            VALUE "ProductVersion", "1.0.0\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -32,33 +33,38 @@ BEGIN
     END
 END
 
-IDD_SETTINGS DIALOGEX 0, 0, 460, 374
+IDD_SETTINGS DIALOGEX 0, 0, 460, 432
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX
 CAPTION "3D Thumbnail 설정"
 FONT 9, "Malgun Gothic"
 BEGIN
     LTEXT "3D Thumbnail", IDC_BRAND, 49, 13, 278, 28
-    LTEXT "탐색기에 표시할 배경과 모델 색상을 바꿔보세요.", IDC_SUBTITLE, 22, 48, 416, 15
+    LTEXT "탐색기에 표시할 색상과 배경 투명도를 바꿔보세요.", IDC_SUBTITLE, 22, 48, 416, 15
     LTEXT "색상 설정", IDC_COLOR_TITLE, 28, 87, 176, 16
     LTEXT "배경", -1, 28, 114, 174, 12
     EDITTEXT IDC_BACKGROUND, 28, 130, 108, 22, ES_AUTOHSCROLL | WS_TABSTOP
     CONTROL "선택", IDC_PICK_BACKGROUND, "Button", BS_OWNERDRAW | WS_TABSTOP, 145, 130, 66, 22
-    LTEXT "모델", -1, 28, 162, 174, 12
-    EDITTEXT IDC_MODEL, 28, 178, 108, 22, ES_AUTOHSCROLL | WS_TABSTOP
-    CONTROL "선택", IDC_PICK_MODEL, "Button", BS_OWNERDRAW | WS_TABSTOP, 145, 178, 66, 22
-    LTEXT "#RRGGBB · 입체적인 명암은 유지됩니다.", -1, 28, 207, 184, 12
-    CONTROL "색상 저장", IDC_SAVE, "Button", BS_OWNERDRAW | WS_TABSTOP, 28, 225, 101, 21
-    CONTROL "기본 색상", IDC_DEFAULTS, "Button", BS_OWNERDRAW | WS_TABSTOP, 137, 225, 74, 21
+    LTEXT "배경 투명도", -1, 28, 164, 105, 12
+    EDITTEXT IDC_TRANSPARENCY, 145, 158, 48, 21, ES_NUMBER | ES_RIGHT | WS_TABSTOP
+    CONTROL "배경 투명도", IDC_TRANSPARENCY_SLIDER, "msctls_trackbar32", TBS_HORZ | TBS_NOTICKS | WS_TABSTOP, 28, 180, 184, 18
+    LTEXT "%", -1, 198, 164, 14, 12
+    LTEXT "0% 불투명 · 100% 완전 투명", -1, 28, 200, 184, 12
+    LTEXT "모델", -1, 28, 220, 174, 12
+    EDITTEXT IDC_MODEL, 28, 236, 108, 22, ES_AUTOHSCROLL | WS_TABSTOP
+    CONTROL "선택", IDC_PICK_MODEL, "Button", BS_OWNERDRAW | WS_TABSTOP, 145, 236, 66, 22
+    LTEXT "모델의 색상과 입체 명암은 유지됩니다.", -1, 28, 265, 184, 12
+    CONTROL "설정 저장", IDC_SAVE, "Button", BS_OWNERDRAW | WS_TABSTOP, 28, 283, 101, 21
+    CONTROL "기본 설정", IDC_DEFAULTS, "Button", BS_OWNERDRAW | WS_TABSTOP, 137, 283, 74, 21
     LTEXT "미리보기", IDC_PREVIEW_TITLE, 248, 87, 172, 16
-    CONTROL "모델 미리보기", IDC_PREVIEW, "Static", SS_OWNERDRAW, 248, 111, 184, 122
-    LTEXT "저장하면 새 썸네일부터 적용됩니다.", -1, 248, 236, 184, 12, SS_CENTER
-    LTEXT "기존 썸네일 갱신", IDC_REFRESH_TITLE, 28, 274, 208, 16
-    LTEXT "파일이나 폴더를 선택해 저장한 색상으로 갱신하세요.", -1, 28, 295, 210, 24
-    CONTROL "파일 선택…", IDC_REFRESH_FILE, "Button", BS_OWNERDRAW | WS_TABSTOP, 250, 276, 86, 24
-    CONTROL "폴더 선택…", IDC_REFRESH_FOLDER, "Button", BS_OWNERDRAW | WS_TABSTOP, 344, 276, 86, 24
-    CONTROL "갱신 중단", IDC_CANCEL_REFRESH, "Button", BS_OWNERDRAW | WS_TABSTOP | WS_DISABLED, 344, 307, 86, 19
-    LTEXT "하위 폴더 제외 · 폴더당 최대 1,000개", IDC_STATUS, 28, 319, 304, 14
-    LTEXT "DMIND", IDC_CREATOR, 22, 350, 50, 16
-    LTEXT "dmind114@gmail.com", IDC_CONTACT, 74, 351, 230, 15
-    CONTROL "닫기", IDCANCEL, "Button", BS_OWNERDRAW | WS_TABSTOP, 376, 346, 68, 23
+    CONTROL "모델 미리보기", IDC_PREVIEW, "Static", SS_OWNERDRAW, 248, 111, 184, 180
+    LTEXT "체크무늬는 투명 영역을 뜻합니다.", -1, 248, 294, 184, 12, SS_CENTER
+    LTEXT "기존 썸네일 갱신", IDC_REFRESH_TITLE, 28, 332, 208, 16
+    LTEXT "파일이나 폴더를 선택해 저장한 설정으로 갱신하세요.", -1, 28, 353, 210, 24
+    CONTROL "파일 선택…", IDC_REFRESH_FILE, "Button", BS_OWNERDRAW | WS_TABSTOP, 250, 334, 86, 24
+    CONTROL "폴더 선택…", IDC_REFRESH_FOLDER, "Button", BS_OWNERDRAW | WS_TABSTOP, 344, 334, 86, 24
+    CONTROL "갱신 중단", IDC_CANCEL_REFRESH, "Button", BS_OWNERDRAW | WS_TABSTOP | WS_DISABLED, 344, 365, 86, 19
+    LTEXT "하위 폴더 제외 · 폴더당 최대 1,000개", IDC_STATUS, 28, 377, 304, 14
+    LTEXT "DMIND", IDC_CREATOR, 22, 408, 50, 16
+    LTEXT "dmind114@gmail.com", IDC_CONTACT, 74, 409, 230, 15
+    CONTROL "닫기", IDCANCEL, "Button", BS_OWNERDRAW | WS_TABSTOP, 376, 404, 68, 23
 END

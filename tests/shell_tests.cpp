@@ -25,7 +25,7 @@ ComPtr<IStream> file_memory(const std::filesystem::path& path) {
     return memory_stream(std::string(std::istreambuf_iterator<char>(file), {}));
 }
 void visible(HBITMAP bitmap, UINT size, WTS_ALPHATYPE alpha) {
-    require(bitmap && alpha == WTSAT_RGB, "Wrong bitmap or alpha contract.");
+    require(bitmap && alpha == WTSAT_ARGB, "Wrong bitmap or alpha contract.");
     DIBSECTION dib{};
     require(GetObjectW(bitmap, sizeof(dib), &dib) == sizeof(dib), "Thumbnail is not a DIB section.");
     require(dib.dsBm.bmWidth == static_cast<LONG>(size) && dib.dsBm.bmHeight == static_cast<LONG>(size) && dib.dsBm.bmBitsPixel == 32, "Wrong bitmap dimensions or depth.");
@@ -35,6 +35,23 @@ void visible(HBITMAP bitmap, UINT size, WTS_ALPHATYPE alpha) {
     require(colored > size * size / 40 && colored < size * size * 9 / 10, "Bitmap is blank or clipped.");
 }
 
+void alpha_tests(const std::filesystem::path& temporary) {
+    for (UINT size : {16U,32U,64U}) {
+        auto stream = memory_stream("alpha");
+        HBITMAP bitmap{}; WTS_ALPHATYPE alpha{};
+        check_hresult(thumbnail_from_stream(stream.Get(), L".stl", size, executable_path().parent_path() / "process-fixture.exe", temporary, &bitmap, &alpha), "Alpha thumbnail");
+        DIBSECTION dib{};
+        require(alpha == WTSAT_ARGB && GetObjectW(bitmap, sizeof(dib), &dib) == sizeof(dib), "Missing alpha bitmap.");
+        const auto* bytes = static_cast<const BYTE*>(dib.dsBm.bmBits);
+        require(bytes[0] == 0 && bytes[1] == 0 && bytes[2] == 0 && bytes[3] == 0, "Hidden RGB was not cleared.");
+        const auto offset = ((size/2)*size + size/4)*4;
+        require(bytes[offset] == 25 && bytes[offset+1] == 50 && bytes[offset+2] == 100 && bytes[offset+3] == 128, "Shell bitmap is not premultiplied BGRA.");
+        for (UINT index = 0; index < size * size; ++index) {
+            for (UINT channel = 0; channel < 3; ++channel) { require(bytes[index*4+channel] <= bytes[index*4+3], "Invalid premultiplied channel after scaling."); }
+        }
+        DeleteObject(bitmap);
+    }
+}
 void bridge_tests(const std::filesystem::path& samples, const std::filesystem::path& temporary) {
     const auto directory = executable_path().parent_path();
     const auto worker = directory / "thumbnail-worker.exe";
@@ -123,6 +140,7 @@ int wmain(int argc, wchar_t** argv) {
             (L"셸 스트림 검증 " + std::to_wstring(std::chrono::steady_clock::now().time_since_epoch().count())));
         std::filesystem::create_directories(temporary);
         bridge_tests(argv[1], temporary);
+        alpha_tests(temporary);
         std::filesystem::remove(temporary);
         com_tests(argv[1]);
         return 0;
