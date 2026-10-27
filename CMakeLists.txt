@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(ThreeDThumbnail VERSION 1.0.1 LANGUAGES C CXX)
+project(ThreeDThumbnail VERSION 1.0.2 LANGUAGES C CXX)
 
 if(NOT WIN32)
     message(FATAL_ERROR "This prototype requires Windows and the Windows SDK.")

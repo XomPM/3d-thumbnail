@@ -253,6 +253,12 @@ INT_PTR CALLBACK settings_dialog(HWND window, UINT message, WPARAM wparam, LPARA
             SetDlgItemInt(window, IDC_TRANSPARENCY, static_cast<UINT>(SendDlgItemMessageW(window, IDC_TRANSPARENCY_SLIDER, TBM_GETPOS, 0, 0)), FALSE);
             return TRUE;
         }
+        if (message == WM_NOTIFY) {
+            const auto* header = reinterpret_cast<const NMHDR*>(lparam);
+            if (header->idFrom != IDC_TRANSPARENCY_SLIDER || header->code != NM_CUSTOMDRAW) { return FALSE; }
+            SetWindowLongPtrW(window, DWLP_MSGRESULT, state->style.draw_slider(window, *reinterpret_cast<const NMCUSTOMDRAW*>(lparam)));
+            return TRUE;
+        }
         if (message == WM_PAINT) { state->style.paint(window); return TRUE; }
         if (message == WM_CTLCOLORDLG) { return reinterpret_cast<INT_PTR>(state->style.background()); }
         if (message == WM_CTLCOLORSTATIC || message == WM_CTLCOLOREDIT) {
@@ -283,6 +289,10 @@ INT_PTR CALLBACK settings_dialog(HWND window, UINT message, WPARAM wparam, LPARA
             return TRUE;
         }
         if (message != WM_COMMAND) { return FALSE; }
+        if (HIWORD(wparam) == EN_SETFOCUS || HIWORD(wparam) == EN_KILLFOCUS) {
+            state->style.invalidate_field(window, LOWORD(wparam));
+            return TRUE;
+        }
         if (HIWORD(wparam) == EN_CHANGE) { SetTimer(window, 1, 250, nullptr); return TRUE; }
         switch (LOWORD(wparam)) {
         case IDC_PICK_BACKGROUND: choose_color(window, IDC_BACKGROUND); break;
@@ -290,9 +300,9 @@ INT_PTR CALLBACK settings_dialog(HWND window, UINT message, WPARAM wparam, LPARA
         case IDC_SAVE:
             save_appearance(read_colors(window));
             update_preview(window, *state);
-            SetDlgItemTextW(window, IDC_STATUS, L"저장했습니다. 기존 썸네일은 아래에서 파일이나 폴더를 선택해 갱신하세요.");
+            SetDlgItemTextW(window, IDC_STATUS, L"저장했습니다. 이미 표시된 썸네일은 파일이나 폴더를 선택해 갱신하세요.");
             break;
-        case IDC_DEFAULTS: set_colors(window, {}); SetDlgItemTextW(window, IDC_STATUS, L"기본 설정을 불러왔습니다. ‘설정 저장’을 누르면 적용됩니다."); break;
+        case IDC_DEFAULTS: set_colors(window, {}); SetDlgItemTextW(window, IDC_STATUS, L"기본값을 불러왔습니다. 저장을 눌러야 적용됩니다."); break;
         case IDC_REFRESH_FILE: refresh_selection(window, *state, false); break;
         case IDC_REFRESH_FOLDER: refresh_selection(window, *state, true); break;
         case IDC_REFRESH_DETAILS:

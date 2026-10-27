@@ -16,8 +16,8 @@ BEGIN
 END
 
 1 VERSIONINFO
-FILEVERSION 1,0,1,0
-PRODUCTVERSION 1,0,1,0
+FILEVERSION 1,0,2,0
+PRODUCTVERSION 1,0,2,0
 FILEFLAGSMASK 0x3fL
 FILEFLAGS 0x0L
 FILEOS VOS_NT_WINDOWS32
@@ -30,12 +30,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "DMIND\0"
             VALUE "FileDescription", "3D Thumbnail 설정\0"
-            VALUE "FileVersion", "1.0.1\0"
+            VALUE "FileVersion", "1.0.2\0"
             VALUE "InternalName", "thumbnail-settings\0"
             VALUE "LegalCopyright", "Copyright (c) 2026 DMIND\0"
             VALUE "OriginalFilename", "thumbnail-settings.exe\0"
             VALUE "ProductName", "3D Thumbnail\0"
-            VALUE "ProductVersion", "1.0.1\0"
+            VALUE "ProductVersion", "1.0.2\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -44,39 +44,42 @@ BEGIN
     END
 END
 
-IDD_SETTINGS DIALOGEX 0, 0, 460, 432
-STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX
+IDD_SETTINGS DIALOGEX 0, 0, 460, 384
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN
 CAPTION "3D Thumbnail 설정"
 FONT 9, "Malgun Gothic"
 BEGIN
-    LTEXT "3D Thumbnail", IDC_BRAND, 49, 13, 278, 28
-    LTEXT "탐색기에 표시할 색상과 배경 투명도를 바꿔보세요.", IDC_SUBTITLE, 22, 48, 416, 15
-    LTEXT "색상 설정", IDC_COLOR_TITLE, 28, 87, 176, 16
-    LTEXT "배경", -1, 28, 114, 174, 12
-    EDITTEXT IDC_BACKGROUND, 28, 130, 108, 22, ES_AUTOHSCROLL | WS_TABSTOP
-    CONTROL "선택", IDC_PICK_BACKGROUND, "Button", BS_OWNERDRAW | WS_TABSTOP, 145, 130, 66, 22
-    LTEXT "배경 투명도", -1, 28, 164, 105, 12
-    EDITTEXT IDC_TRANSPARENCY, 145, 158, 48, 21, ES_NUMBER | ES_RIGHT | WS_TABSTOP
-    CONTROL "배경 투명도", IDC_TRANSPARENCY_SLIDER, "msctls_trackbar32", TBS_HORZ | TBS_NOTICKS | WS_TABSTOP, 28, 180, 184, 18
-    LTEXT "%", -1, 198, 164, 14, 12
-    LTEXT "0% 불투명 · 100% 완전 투명", -1, 28, 200, 184, 12
-    LTEXT "모델", -1, 28, 220, 174, 12
-    EDITTEXT IDC_MODEL, 28, 236, 108, 22, ES_AUTOHSCROLL | WS_TABSTOP
-    CONTROL "선택", IDC_PICK_MODEL, "Button", BS_OWNERDRAW | WS_TABSTOP, 145, 236, 66, 22
-    LTEXT "모델의 색상과 입체 명암은 유지됩니다.", -1, 28, 265, 184, 12
-    CONTROL "설정 저장", IDC_SAVE, "Button", BS_OWNERDRAW | WS_TABSTOP, 28, 283, 101, 21
-    CONTROL "기본 설정", IDC_DEFAULTS, "Button", BS_OWNERDRAW | WS_TABSTOP, 137, 283, 74, 21
-    LTEXT "미리보기", IDC_PREVIEW_TITLE, 248, 87, 172, 16
-    CONTROL "모델 미리보기", IDC_PREVIEW, "Static", SS_OWNERDRAW, 248, 111, 184, 180
-    LTEXT "체크무늬는 투명 영역을 뜻합니다.", -1, 248, 294, 184, 12, SS_CENTER
-    LTEXT "기존 썸네일 갱신", IDC_REFRESH_TITLE, 28, 332, 208, 16
-    LTEXT "파일/폴더를 선택해 갱신합니다.\n3MF 내장 이미지는 원래 색상·배경을 유지합니다.", -1, 28, 353, 210, 24
-    CONTROL "파일 선택…", IDC_REFRESH_FILE, "Button", BS_OWNERDRAW | WS_TABSTOP, 250, 334, 86, 24
-    CONTROL "폴더 선택…", IDC_REFRESH_FOLDER, "Button", BS_OWNERDRAW | WS_TABSTOP, 344, 334, 86, 24
-    CONTROL "갱신 중단", IDC_CANCEL_REFRESH, "Button", BS_OWNERDRAW | WS_TABSTOP | WS_DISABLED, 344, 365, 86, 19
-    CONTROL "실패 상세…", IDC_REFRESH_DETAILS, "Button", BS_OWNERDRAW | WS_TABSTOP | WS_DISABLED, 250, 359, 86, 18
-    LTEXT "하위 폴더 제외 · 폴더당 최대 1,000개", IDC_STATUS, 28, 379, 304, 24
-    LTEXT "DMIND", IDC_CREATOR, 22, 408, 50, 16
-    LTEXT "dmind114@gmail.com", IDC_CONTACT, 74, 409, 230, 15
-    CONTROL "닫기", IDCANCEL, "Button", BS_OWNERDRAW | WS_TABSTOP, 376, 404, 68, 23
+    LTEXT "3D Thumbnail", IDC_BRAND, 50, 11, 240, 18
+    LTEXT "탐색기 썸네일의 배경과 모델 색을 정합니다.", IDC_SUBTITLE, 50, 30, 300, 10
+    RTEXT "버전 1.0.2", IDC_VERSION, 364, 30, 80, 10
+
+    LTEXT "썸네일 모양", IDC_COLOR_TITLE, 28, 63, 200, 12
+    LTEXT "배경 색", -1, 28, 88, 56, 10
+    CONTROL "배경 색 선택", IDC_PICK_BACKGROUND, "Button", BS_OWNERDRAW | WS_TABSTOP, 88, 84, 16, 16
+    EDITTEXT IDC_BACKGROUND, 108, 84, 142, 16, ES_AUTOHSCROLL | ES_UPPERCASE | NOT WS_BORDER | WS_TABSTOP
+    LTEXT "배경 투명도", -1, 28, 114, 56, 10
+    CONTROL "배경 투명도", IDC_TRANSPARENCY_SLIDER, "msctls_trackbar32", TBS_HORZ | TBS_NOTICKS | TBS_BOTH | WS_TABSTOP, 84, 110, 110, 16
+    EDITTEXT IDC_TRANSPARENCY, 200, 110, 50, 16, ES_NUMBER | ES_RIGHT | NOT WS_BORDER | WS_TABSTOP
+    LTEXT "0%는 불투명, 100%는 배경 없이 모델만 보입니다.", IDC_HELP_TRANSPARENCY, 88, 130, 162, 10
+    LTEXT "모델 색", -1, 28, 154, 56, 10
+    CONTROL "모델 색 선택", IDC_PICK_MODEL, "Button", BS_OWNERDRAW | WS_TABSTOP, 88, 150, 16, 16
+    EDITTEXT IDC_MODEL, 108, 150, 142, 16, ES_AUTOHSCROLL | ES_UPPERCASE | NOT WS_BORDER | WS_TABSTOP
+    LTEXT "3MF에 제작자가 넣은 썸네일이 있으면 그 이미지를 그대로 보여 줍니다. 없을 때만 이 설정으로 새로 만듭니다.", IDC_NOTE, 28, 188, 222, 28
+    CONTROL "기본값", IDC_DEFAULTS, "Button", BS_OWNERDRAW | WS_TABSTOP, 28, 228, 60, 18
+    CONTROL "저장", IDC_SAVE, "Button", BS_OWNERDRAW | WS_TABSTOP, 190, 228, 60, 18
+
+    LTEXT "미리보기", IDC_PREVIEW_TITLE, 284, 63, 148, 12
+    CONTROL "모델 미리보기", IDC_PREVIEW, "Static", SS_OWNERDRAW, 296, 86, 124, 124
+    CTEXT "bearing.stl", IDC_PREVIEW_NAME, 290, 216, 136, 10
+
+    LTEXT "기존 썸네일 갱신", IDC_REFRESH_TITLE, 28, 279, 200, 12
+    LTEXT "이미 표시된 썸네일은 저장 후 여기서 다시 만들어야 바뀝니다.", IDC_REFRESH_HELP, 28, 295, 232, 10
+    LTEXT "하위 폴더는 포함하지 않으며, 폴더당 최대 1,000개까지 갱신합니다.", IDC_STATUS, 28, 313, 232, 20
+    CONTROL "파일 선택…", IDC_REFRESH_FILE, "Button", BS_OWNERDRAW | WS_TABSTOP, 274, 279, 76, 18
+    CONTROL "폴더 선택…", IDC_REFRESH_FOLDER, "Button", BS_OWNERDRAW | WS_TABSTOP, 356, 279, 76, 18
+    CONTROL "실패 상세…", IDC_REFRESH_DETAILS, "Button", BS_OWNERDRAW | WS_TABSTOP | WS_DISABLED, 274, 303, 76, 18
+    CONTROL "갱신 중단", IDC_CANCEL_REFRESH, "Button", BS_OWNERDRAW | WS_TABSTOP | WS_DISABLED, 356, 303, 76, 18
+
+    LTEXT "DMIND  ·  dmind114@gmail.com", IDC_CONTACT, 18, 359, 240, 10
+    CONTROL "닫기", IDCANCEL, "Button", BS_OWNERDRAW | WS_TABSTOP, 376, 355, 68, 18
 END

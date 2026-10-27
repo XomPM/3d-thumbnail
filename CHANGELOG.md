@@ -1,5 +1,10 @@
 # Changes
 
+## 1.0.2
+
+- 3MF: show the creator's stored package thumbnail first; render the model only when none is usable.
+- Redesigned settings window: aligned fields and buttons, color swatches beside HEX values, palette-matched slider, Explorer-style preview tile.
+
 ## 1.0.1
 
 - Render Bambu Studio and other slicer 3MF files that carry vendor metadata/attributes (lib3mf non-strict reading).

@@ -21,7 +21,7 @@ std::wstring lowercase_extension(const std::filesystem::path& path) {
 }
 
 void show_usage() {
-    std::wcout << L"3D Thumbnail worker 1.0.1\n"
+    std::wcout << L"3D Thumbnail worker 1.0.2\n"
                << L"Usage: thumbnail-cli INPUT OUTPUT.png [--size 64..1024] [--background #RRGGBB] [--model #RRGGBB] [--background-transparency 0..100]\n"
                << L"Formats: STL, STEP/STP, OBJ, 3MF, GLB/glTF, PLY, IGES/IGS, FBX. Default size 256.\n"
                << L"Output must not already exist. Run thumbnail-cli to enforce worker resource limits.\n";
@@ -72,18 +72,27 @@ int wmain(int argc, wchar_t* argv[]) {
         }
         thumbnail::Image image;
         std::size_t triangle_count = 0;
-        try {
-            const auto mesh = thumbnail::read_model(input);
-            triangle_count = mesh.triangles.size();
-            image = thumbnail::render_thumbnail(mesh, size, appearance);
-        } catch (const std::runtime_error& geometry_error) {
-            if (lowercase_extension(input) != L".3mf") { throw; }
-            try { image = thumbnail::read_3mf_preview(thumbnail::read_model_bytes(input), size); }
-            catch (const std::exception& preview_error) {
-                throw std::runtime_error(std::string(geometry_error.what()) + " Stored preview unavailable: " + preview_error.what());
+        std::string preview_unavailable;
+        const bool three_mf = lowercase_extension(input) == L".3mf";
+        if (three_mf) {
+            // Creators often ship a cover image in the package; show it as they intended.
+            try {
+                image = thumbnail::read_3mf_preview(thumbnail::read_model_bytes(input), size);
+                std::cout << "Using stored 3MF preview; original colors/background retained. Geometry was not rendered.\n";
+            } catch (const std::exception& preview_error) {
+                preview_unavailable = preview_error.what();
             }
-            std::cout << "Using stored 3MF preview; original colors/background retained. Geometry was not validated.\n"
-                      << "Direct rendering unavailable: " << geometry_error.what() << '\n';
+        }
+        if (image.rgba.empty()) {
+            try {
+                const auto mesh = thumbnail::read_model(input);
+                triangle_count = mesh.triangles.size();
+                image = thumbnail::render_thumbnail(mesh, size, appearance);
+            } catch (const std::runtime_error& geometry_error) {
+                if (!three_mf) { throw; }
+                throw std::runtime_error(std::string(geometry_error.what()) + " Stored preview unavailable: " + preview_unavailable);
+            }
+            if (three_mf) { std::cout << "No usable stored 3MF preview; rendered the model. Reason: " << preview_unavailable << '\n'; }
         }
         thumbnail::write_png(image, output);
         const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(

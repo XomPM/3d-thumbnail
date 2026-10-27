@@ -122,10 +122,13 @@ if __name__ == '__main__':
     folder = Path(tempfile.mkdtemp(prefix='preview-한글-', dir=args.output.resolve()))
     image = png()
     run_case(folder, 'stored-preview', package(image), True)
-    run_case(folder, 'geometry-priority', package(image, valid_geometry=True), True, False)
+    # A creator's stored preview wins even when the geometry could be rendered.
+    run_case(folder, 'preview-priority', package(image, valid_geometry=True), True)
+    run_case(folder, 'geometry-without-preview', package(image, valid_geometry=True, relation=False), True, False)
+    run_case(folder, 'broken-preview-renders-model', package(b'not a PNG', valid_geometry=True), True, False)
     # Vendor metadata/attributes are tolerated (lib3mf non-strict mode), so these render directly.
-    run_case(folder, 'bambu-metadata', package(image, valid_geometry=True, metadata=True), True, False)
-    run_case(folder, 'bambu-paint', package(image, valid_geometry=True, paint=True), True, False)
+    run_case(folder, 'bambu-metadata', package(image, valid_geometry=True, metadata=True, relation=False), True, False)
+    run_case(folder, 'bambu-paint', package(image, valid_geometry=True, paint=True, relation=False), True, False)
     # Slicer previews are often 24-bit RGB; red must stay red (regression: red/blue were swapped).
     run_case(folder, 'rgb-preview-colors', package(png(32, 32, (230, 180, 20))), True, True, (230, 180, 20, 255))
     run_case(folder, 'rgba-preview-colors', package(png(32, 32, (20, 120, 230, 255))), True, True, (20, 120, 230, 255))
