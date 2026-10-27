@@ -136,8 +136,6 @@ void refresh_selection(HWND window, SettingsWindow& state, bool folder) {
     const auto path = choose_path(window, folder);
     if (path.empty()) { return; }
     save_appearance(read_colors(window));
-    set_busy(window, state, true);
-    SetDlgItemTextW(window, IDC_STATUS, L"색상을 저장했습니다. 썸네일 갱신 중…");
     state.refresh_thread = std::jthread([window, path, folder](std::stop_token stop) {
         unsigned done = 0, failed = 0;
         std::wstring detail;
@@ -167,6 +165,8 @@ void refresh_selection(HWND window, SettingsWindow& state, bool folder) {
         post_status(window, kRefreshFinished, (stop.stop_requested() ? L"중단됨. " : L"완료. ") +
             std::wstring(L"갱신 ") + std::to_wstring(done) + L"개 / 실패 " + std::to_wstring(failed) + L"개. " + detail);
     });
+    set_busy(window, state, true);
+    SetDlgItemTextW(window, IDC_STATUS, L"색상을 저장했습니다. 썸네일 갱신 중…");
 }
 
 INT_PTR CALLBACK settings_dialog(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
@@ -219,7 +219,7 @@ INT_PTR CALLBACK settings_dialog(HWND window, UINT message, WPARAM wparam, LPARA
         case IDC_SAVE:
             save_appearance(read_colors(window));
             update_preview(window, *state);
-            SetDlgItemTextW(window, IDC_STATUS, L"저장했습니다. 기존 파일은 ‘파일 선택 후 갱신’ 또는 ‘폴더 갱신’을 사용하세요.");
+            SetDlgItemTextW(window, IDC_STATUS, L"저장했습니다. 기존 썸네일은 아래에서 파일이나 폴더를 선택해 갱신하세요.");
             break;
         case IDC_DEFAULTS: set_colors(window, {}); SetDlgItemTextW(window, IDC_STATUS, L"기본 색상을 불러왔습니다. ‘색상 저장’을 누르면 적용됩니다."); break;
         case IDC_REFRESH_FILE: refresh_selection(window, *state, false); break;

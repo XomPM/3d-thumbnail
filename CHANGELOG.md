@@ -3,6 +3,7 @@
 ## 0.5.0 preview
 
 - Add per-user background/model color settings, HEX input, color picker, preview and default restoration.
+- Refine the settings layout with a live model preview, clear color controls and DMIND creator details.
 - Apply saved colors to the worker and allow per-invocation CLI color overrides.
 - Refresh selected files or a single folder through the Windows thumbnail cache, with cancellation between files.
 - Add a per-user Windows installer and transactional runtime updates that retain the original handler backup.
